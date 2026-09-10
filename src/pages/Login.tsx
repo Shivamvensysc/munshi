@@ -1,9 +1,88 @@
-import { Link } from "react-router-dom";
-import { Lock, Eye, BookOpen, ShieldCheck, Zap, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Lock,
+  Eye,
+  EyeOff,
+  BookOpen,
+  ShieldCheck,
+  Zap,
+  ArrowRight,
+} from "lucide-react";
+import { toast } from "react-toastify";
 import PhoneField from "../components/PhoneField";
 import Button from "../components/Button";
 
+const API_LOGIN_URL = "http://192.168.0.158:5000/api/auth/login";
+
 export default function Login() {
+  const navigate = useNavigate();
+
+  // Form State
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [pin, setPin] = useState("");
+
+  // UI Interaction States
+  const [showPin, setShowPin] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Handle Login Form Submission
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    const cleanMobile = mobileNumber.replace(/\D/g, "");
+
+    if (!cleanMobile || cleanMobile.length < 10) {
+      toast.error("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    if (!pin || pin.length !== 4) {
+      toast.error("Please enter your 4-digit PIN.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(API_LOGIN_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mobile_number: cleanMobile,
+          pin: pin,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message || "Login successful!");
+
+        // Store tokens and user details in localStorage
+        if (data.token) localStorage.setItem("token", data.token);
+        if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
+        if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
+        if (data.khatas) localStorage.setItem("khatas", JSON.stringify(data.khatas));
+        if (data.defaultKhata) localStorage.setItem("defaultKhata", JSON.stringify(data.defaultKhata));
+
+        // Redirect to dashboard or home page
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1000);
+      } else {
+        toast.error(data.message || "Invalid credentials. Please try again.");
+      }
+    } catch (error) {
+      console.error("Login API Error:", error);
+      toast.error("Unable to connect to the server. Please check your network.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full bg-slate-950 font-sans text-slate-100">
       
@@ -70,7 +149,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* RIGHT SIDE: Login Form Static UI */}
+      {/* RIGHT SIDE: Login Form Dynamic UI */}
       <div className="flex w-full flex-col justify-between bg-white px-6 py-8 dark:bg-slate-900 lg:w-1/2 sm:px-12 xl:px-20">
         
         {/* Mobile Header Logo */}
@@ -104,11 +183,15 @@ export default function Login() {
           </div>
 
           {/* Form */}
-          <form className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             
             {/* Mobile Number Field */}
             <div>
-              <PhoneField value="" onChange={() => {}} />
+              <PhoneField
+                value={mobileNumber}
+                onChange={(val) => setMobileNumber(val)}
+                disabled={isLoading}
+              />
             </div>
 
             {/* Password PIN Field */}
@@ -129,29 +212,34 @@ export default function Login() {
                 <Lock size={18} className="shrink-0 text-slate-400" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPin ? "text" : "password"}
                   inputMode="numeric"
                   maxLength={4}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
                   placeholder="••••"
                   className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
+                  required
                 />
                 <button
                   type="button"
+                  onClick={() => setShowPin(!showPin)}
                   className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                   aria-label="Toggle password visibility"
                 >
-                  <Eye size={18} />
+                  {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
 
             {/* Submit Button */}
             <Button
-              type="button"
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 active:scale-[0.99] transition-all"
+              type="submit"
+              disabled={isLoading}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 active:scale-[0.99] transition-all disabled:opacity-50"
             >
               <span className="flex items-center gap-1.5">
-                Sign In <ArrowRight size={16} />
+                {isLoading ? "Signing In..." : "Sign In"} <ArrowRight size={16} />
               </span>
             </Button>
           </form>

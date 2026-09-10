@@ -1,16 +1,135 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Lock,
   Eye,
+  EyeOff,
   BookOpen,
   ShieldCheck,
   Zap,
   ArrowRight,
+  KeyRound,
+  CheckCircle2,
 } from "lucide-react";
+import { toast } from "react-toastify";
 import PhoneField from "../components/PhoneField";
 import Button from "../components/Button";
 
+const API_BASE_URL = "http://192.168.0.158:5000/api/auth";
+
 export default function SignUp() {
+  const navigate = useNavigate();
+
+  // Form State
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+
+  // UI Flow & Interaction States
+  const [step, setStep] = useState(1); // 1 = Request OTP, 2 = Verify OTP & Register
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [showConfirmPin, setShowConfirmPin] = useState(false);
+
+  // Step 1: Send OTP API Call
+  const handleSendOtp = async (e) => {
+    e?.preventDefault();
+
+    if (!mobileNumber || mobileNumber.replace(/\D/g, "").length < 10) {
+      toast.error("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mobile_number: mobileNumber.replace(/\D/g, ""),
+          purpose: "REGISTRATION",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message || "OTP sent successfully!");
+        
+        // Auto-fill OTP in development environment if returned by API
+        if (data.otp) {
+          setOtpCode(data.otp);
+        }
+        
+        setStep(2);
+      } else {
+        toast.error(data.message || "Failed to send OTP. Please try again.");
+      }
+    } catch (error) {
+      console.error("Send OTP Error:", error);
+      toast.error("Server connection error. Please check your network.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2: Register Account API Call
+  const handleRegister = async (e) => {
+    e.preventDefault();
+
+    const cleanMobile = mobileNumber.replace(/\D/g, "");
+
+    if (!cleanMobile) {
+      toast.error("Mobile number is required.");
+      return;
+    }
+
+    if (!otpCode || otpCode.length < 4) {
+      toast.error("Please enter a valid OTP code.");
+      return;
+    }
+
+    if (!pin || pin.length !== 4) {
+      toast.error("Password/PIN must be exactly 4 digits.");
+      return;
+    }
+
+    if (pin !== confirmPin) {
+      toast.error("Passwords/PINs do not match!");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mobile_number: cleanMobile,
+          otp_code: otpCode,
+          pin: pin,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message || "Account registered successfully!");
+        setTimeout(() => {
+          navigate("/login");
+        }, 1500);
+      } else {
+        toast.error(data.message || "Registration failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Registration Error:", error);
+      toast.error("Server connection error. Please check your network.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full bg-slate-950 font-sans text-slate-100">
       
@@ -46,7 +165,7 @@ export default function SignUp() {
             </span>
 
             <h1 className="text-4xl font-extrabold tracking-tight text-white xl:text-5xl leading-[1.15]">
-              Start your  digital ledger in <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-violet-300">seconds.</span>
+              Start your digital ledger in <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-violet-300">seconds.</span>
             </h1>
 
             <p className="text-sm font-normal text-slate-400 leading-relaxed max-w-md">
@@ -84,7 +203,7 @@ export default function SignUp() {
         </div>
       </div>
 
-      {/* RIGHT SIDE: SignUp Static Form Container */}
+      {/* RIGHT SIDE: SignUp Interactive Form Container */}
       <div className="flex w-full flex-col justify-between bg-white px-6 py-8 dark:bg-slate-900 lg:w-1/2 sm:px-12 xl:px-20">
         
         {/* Navigation Top Header */}
@@ -110,78 +229,144 @@ export default function SignUp() {
         <div className="my-auto mx-auto w-full max-w-md space-y-6 py-6">
           <div className="space-y-2">
             <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-              Get Started  ✨
+              {step === 1 ? "Get Started ✨" : "Verify & Complete Setup 🔒"}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Create your free digital khata book in less than 30 seconds.
+              {step === 1
+                ? "Enter your phone number to receive a verification OTP."
+                : `Enter the OTP sent to +91 ${mobileNumber} and set your 4-digit PIN.`}
             </p>
           </div>
 
-          <form className="space-y-4">
+          <form onSubmit={step === 1 ? handleSendOtp : handleRegister} className="space-y-4">
             
             {/* Mobile Number Input */}
             <div>
-              <PhoneField value="" onChange={() => {}} />
-            </div>
-
-            {/* New Password / PIN Input */}
-            <div>
-              <label htmlFor="new-password" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                New 4-Digit Password
-              </label>
-              <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 transition-all focus-within:border-indigo-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-600/20 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-800/50 dark:focus-within:border-indigo-500 dark:focus-within:bg-slate-800">
-                <Lock size={18} className="shrink-0 text-slate-400" />
-                <input
-                  id="new-password"
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={4}
-                  placeholder="Enter 4-digit PIN"
-                  className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
-                />
+              <PhoneField
+                value={mobileNumber}
+                onChange={(val) => setMobileNumber(val)}
+                disabled={step === 2 || isLoading}
+              />
+              {step === 2 && (
                 <button
                   type="button"
-                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                  aria-label="Toggle password visibility"
+                  onClick={() => setStep(1)}
+                  className="mt-1 text-[11px] font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
                 >
-                  <Eye size={18} />
+                  Change phone number?
                 </button>
-              </div>
+              )}
             </div>
 
-            {/* Confirm Password / PIN Input */}
-            <div>
-              <label htmlFor="confirm-password" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Re-type Password
-              </label>
-              <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 transition-all focus-within:border-indigo-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-600/20 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-800/50 dark:focus-within:border-indigo-500 dark:focus-within:bg-slate-800">
-                <Lock size={18} className="shrink-0 text-slate-400" />
-                <input
-                  id="confirm-password"
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={4}
-                  placeholder="Confirm 4-digit PIN"
-                  className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
-                />
-                <button
-                  type="button"
-                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                  aria-label="Toggle password visibility"
-                >
-                  <Eye size={18} />
-                </button>
-              </div>
-            </div>
+            {/* STEP 2 FIELDS: OTP and PIN Inputs */}
+            {step === 2 && (
+              <>
+                {/* OTP Code Input */}
+                <div>
+                  <label htmlFor="otp-code" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    6-Digit Verification OTP
+                  </label>
+                  <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 transition-all focus-within:border-indigo-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-600/20 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-800/50 dark:focus-within:border-indigo-500 dark:focus-within:bg-slate-800">
+                    <KeyRound size={18} className="shrink-0 text-slate-400" />
+                    <input
+                      id="otp-code"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      placeholder="Enter 6-digit OTP"
+                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.2em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={isLoading}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 shrink-0"
+                    >
+                      Resend
+                    </button>
+                  </div>
+                </div>
+
+                {/* New Password / PIN Input */}
+                <div>
+                  <label htmlFor="new-password" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    New 4-Digit Password (PIN)
+                  </label>
+                  <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 transition-all focus-within:border-indigo-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-600/20 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-800/50 dark:focus-within:border-indigo-500 dark:focus-within:bg-slate-800">
+                    <Lock size={18} className="shrink-0 text-slate-400" />
+                    <input
+                      id="new-password"
+                      type={showPin ? "text" : "password"}
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value)}
+                      placeholder="Enter 4-digit PIN"
+                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPin(!showPin)}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password / PIN Input */}
+                <div>
+                  <label htmlFor="confirm-password" className="mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Re-type Password (PIN)
+                  </label>
+                  <div className="relative flex items-center rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 transition-all focus-within:border-indigo-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-600/20 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-800/50 dark:focus-within:border-indigo-500 dark:focus-within:bg-slate-800">
+                    <Lock size={18} className="shrink-0 text-slate-400" />
+                    <input
+                      id="confirm-password"
+                      type={showConfirmPin ? "text" : "password"}
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={confirmPin}
+                      onChange={(e) => setConfirmPin(e.target.value)}
+                      placeholder="Confirm 4-digit PIN"
+                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPin(!showConfirmPin)}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                      aria-label="Toggle password visibility"
+                    >
+                      {showConfirmPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Submit Action */}
             <Button
-              type="button"
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 active:scale-[0.99] transition-all"
+              type="submit"
+              disabled={isLoading}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 active:scale-[0.99] transition-all disabled:opacity-50"
             >
-              <span className="flex items-center gap-1.5">
-                Create Account <ArrowRight size={16} />
-              </span>
+              {isLoading ? (
+                <span>Processing...</span>
+              ) : step === 1 ? (
+                <span className="flex items-center gap-1.5">
+                  Send Verification OTP <ArrowRight size={16} />
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  Create Account <CheckCircle2 size={16} />
+                </span>
+              )}
             </Button>
           </form>
 

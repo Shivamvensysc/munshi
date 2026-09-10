@@ -1,4 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Receipt, Loader2 } from "lucide-react";
+
+interface CustomerApiData {
+  khata_customer_id: string;
+  khata_id: string;
+  customer_id: string;
+  customer_name: string;
+  mobile_number: string;
+  address: string;
+  is_active: boolean;
+  total_lene: string;
+  total_dene: string;
+  net_balance: string;
+  last_activity_date: string | null;
+  created_at: string;
+}
 
 interface Entry {
   id: string;
@@ -11,120 +27,180 @@ interface Entry {
   status?: string;
 }
 
-const initialEntries: Entry[] = [
-  {
-    id: "1",
-    name: "Javed",
-    description: "Cross",
-    date: "09-09-2026 11:55:49 AM",
-    subName: "Achintaya",
-    leneAmount: "₹ 5,000",
-    status: "CRE",
-  },
-  {
-    id: "2",
-    name: "Achintaya",
-    description: "Cross",
-    date: "09-09-2026 11:55:49 AM",
-    subName: "Javed",
-    deneAmount: "₹ 5,000",
-    status: "CRE",
-  },
-  {
-    id: "3",
-    name: "Shivam",
-    description: "Cash",
-    date: "09-09-2026 11:45:57 AM",
-    deneAmount: "₹ 50,000",
-  },
-  {
-    id: "4",
-    name: "Shivam",
-    description: "Cash Mein Diye",
-    date: "09-09-2026 11:45:14 AM",
-    deneAmount: "₹ 1,00,000",
-  },
-  {
-    id: "5",
-    name: "Shivam",
-    description: "Cash For Car",
-    date: "09-09-2026 11:44:50 AM",
-    leneAmount: "₹ 6,00,000",
-  },
-  {
-    id: "6",
-    name: "Javed",
-    description: "Cash mein after 0 amo\nunt",
-    date: "08-09-2026 08:15:26 PM",
-    deneAmount: "₹ 15,000",
-  },
-];
+const API_BASE_URL = "http://192.168.0.158:5000/api/parties/khata";
 
 export default function LedgerEntriesList() {
-  const [entries] = useState<Entry[]>(initialEntries);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [isFetching, setIsFetching] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Helper to retrieve active Khata ID from localStorage
+  const getKhataId = (): string | null => {
+    return localStorage.getItem("khataId");
+  };
+
+  // Helper to get authorization headers
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
+
+  // Helper function to format ISO date to readable string (e.g. 10-09-2026 12:26 PM)
+  const formatDate = (isoString: string | null): string => {
+    if (!isoString) return "";
+    const dateObj = new Date(isoString);
+    if (isNaN(dateObj.getTime())) return isoString;
+
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const year = dateObj.getFullYear();
+
+    let hours = dateObj.getHours();
+    const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+
+    return `${day}-${month}-${year} ${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
+  };
+
+  // GET API Call
+  const fetchKhataEntries = async () => {
+    const khataId = getKhataId();
+    if (!khataId) {
+      setErrorMsg("No active Khata selected.");
+      setIsFetching(false);
+      return;
+    }
+
+    setIsFetching(true);
+    setErrorMsg(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/${khataId}`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success && Array.isArray(data.data)) {
+        const mappedEntries: Entry[] = data.data.map((item: CustomerApiData) => {
+          const lene = parseFloat(item.total_lene || "0");
+          const dene = parseFloat(item.total_dene || "0");
+
+          return {
+            id: item.khata_customer_id,
+            name: item.customer_name,
+            description: item.address || item.mobile_number || "No address provided",
+            date: formatDate(item.last_activity_date || item.created_at),
+            subName: item.mobile_number ? `Mob: ${item.mobile_number}` : undefined,
+            leneAmount: lene > 0 ? `₹ ${lene.toLocaleString("en-IN")}` : undefined,
+            deneAmount: dene > 0 ? `₹ ${dene.toLocaleString("en-IN")}` : undefined,
+            status: item.is_active ? "CRE" : undefined,
+          };
+        });
+
+        setEntries(mappedEntries);
+      } else {
+        setErrorMsg(data.message || "Failed to fetch entries.");
+      }
+    } catch (error) {
+      console.error("Fetch Entries Error:", error);
+      setErrorMsg("Unable to connect to the server.");
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchKhataEntries();
+  }, []);
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 p-2 sm:p-4 font-sans text-slate-900">
-      <div className="mx-auto w-full max-w-[1400px] overflow-hidden rounded-md border border-slate-300 bg-white shadow-xs">
-        
-        {/* Blue Header Bar */}
-        <div className="grid grid-cols-12 bg-[#5d8cd6] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white">
-          <div className="col-span-6 sm:col-span-5">ENTRIES</div>
-          <div className="col-span-3 text-center sm:col-span-3">LENE</div>
-          <div className="col-span-3 text-right sm:col-span-4 pr-1">DENE</div>
+    <div className="w-full font-sans text-ink-900">
+      {/* PAGE HEADING */}
+      <div className="mb-5 flex flex-col gap-1 sm:mb-6">
+        <h1 className="text-xl font-extrabold tracking-tight text-ink-900 sm:text-2xl">
+          Transactions
+        </h1>
+        <p className="text-xs font-medium text-ink-500 sm:text-sm">
+          Every lene / dene entry recorded across your khata, newest first.
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+        {/* Header Bar */}
+        <div className="grid grid-cols-12 items-center gap-2 bg-gradient-to-r from-brand-700 to-brand-600 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-white sm:text-xs">
+          <div className="col-span-6 flex items-center gap-1.5 sm:col-span-5">
+            <Receipt size={13} />
+            <span>Entries</span>
+          </div>
+          <div className="col-span-3 text-center sm:col-span-3">Lene</div>
+          <div className="col-span-3 pr-1 text-right sm:col-span-4">Dene</div>
         </div>
 
         {/* Entries Cards List */}
-        <div className="space-y-3 bg-slate-200/50 p-2 sm:p-3">
-          {entries.map((item) => (
-            <div
-              key={item.id}
-              className="grid grid-cols-12 items-center rounded-lg border border-slate-300 bg-white px-4 py-3 shadow-xs transition-all hover:border-slate-400"
-            >
-              {/* Left Column: Entries Details */}
-              <div className="col-span-6 space-y-0.5 sm:col-span-5">
-                <div className="text-sm font-extrabold text-slate-900">
-                  {item.name}
-                </div>
-                <div className="whitespace-pre-line text-xs font-semibold text-slate-700">
-                  {item.description}
-                </div>
-                <div className="text-[11px] font-semibold text-slate-500">
-                  {item.date}
-                </div>
-                {item.subName && (
-                  <div className="text-xs font-bold text-blue-700">
-                    {item.subName}
-                  </div>
-                )}
-              </div>
-
-              {/* Middle Column: LENE Amount */}
-              <div className="col-span-3 text-center">
-                {item.leneAmount && (
-                  <span className="text-xs font-black text-red-600 sm:text-sm">
-                    {item.leneAmount}
-                  </span>
-                )}
-              </div>
-
-              {/* Right Column: DENE Amount & Status Badge */}
-              <div className="col-span-3 flex items-center justify-end gap-3 pr-1 sm:col-span-4">
-                {item.deneAmount && (
-                  <span className="text-xs font-black text-emerald-700 sm:text-sm">
-                    {item.deneAmount}
-                  </span>
-                )}
-                {item.status && (
-                  <span className="text-xs font-black text-blue-800">
-                    {item.status}
-                  </span>
-                )}
-              </div>
+        <div className="space-y-2.5 bg-slate-50/60 p-2.5 sm:p-3.5">
+          {isFetching ? (
+            <div className="flex items-center justify-center py-12 text-slate-400 gap-2 text-xs font-semibold sm:text-sm">
+              <Loader2 size={18} className="animate-spin text-brand-600" />
+              <span>Loading transactions...</span>
             </div>
-          ))}
-        </div>
+          ) : errorMsg ? (
+            <div className="py-8 text-center text-xs font-medium text-red-500 sm:text-sm">
+              {errorMsg}
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="py-8 text-center text-xs font-medium text-slate-400 sm:text-sm">
+              No entries found for this Khata.
+            </div>
+          ) : (
+            entries.map((item) => (
+              <div
+                key={item.id}
+                className="grid grid-cols-12 items-center rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-xs transition-all hover:border-brand-200 hover:shadow-sm"
+              >
+                {/* Left Column: Entries Details */}
+                <div className="col-span-6 space-y-0.5 sm:col-span-5">
+                  <div className="text-sm font-extrabold text-ink-900">{item.name}</div>
+                  <div className="whitespace-pre-line text-xs font-semibold text-ink-700">
+                    {item.description}
+                  </div>
+                  <div className="text-[11px] font-semibold text-ink-300">{item.date}</div>
+                  {item.subName && (
+                    <div className="text-xs font-bold text-brand-700">{item.subName}</div>
+                  )}
+                </div>
 
+                {/* Middle Column: LENE Amount */}
+                <div className="col-span-3 text-center">
+                  {item.leneAmount && (
+                    <span className="text-xs font-black text-debit-600 sm:text-sm">
+                      {item.leneAmount}
+                    </span>
+                  )}
+                </div>
+
+                {/* Right Column: DENE Amount & Status Badge */}
+                <div className="col-span-3 flex items-center justify-end gap-3 pr-1 sm:col-span-4">
+                  {item.deneAmount && (
+                    <span className="text-xs font-black text-credit-600 sm:text-sm">
+                      {item.deneAmount}
+                    </span>
+                  )}
+                  {item.status && (
+                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-black text-brand-800">
+                      {item.status}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

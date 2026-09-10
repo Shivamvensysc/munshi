@@ -23,7 +23,8 @@ export default function App() {
       <Route element={<Index />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/khatalist" element={<KhataList />} />
-        <Route path="/customer-detail" element={<CustomerDetail />} />
+        {/* <Route path="/customer-detail" element={<CustomerDetail />} /> */}
+        <Route path="/customer-detail/:khataCustomerId" element={<CustomerDetail />} />
         <Route path="/ledger-entries-page" element={<LedgerEntriesPage />} />
         <Route path="/payment-transfer-form" element={<PaymentTransferForm />} />
         <Route path="/account-profile-page" element={<AccountProfilePage />} />
