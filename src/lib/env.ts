@@ -31,5 +31,5 @@ function readEnv(key: string, fallback?: string): string {
 /** Base URL of the backend REST API, e.g. "http://192.168.0.158:5000/api". */
 export const API_BASE_URL = readEnv(
   "VITE_API_BASE_URL",
-  "http://192.168.0.158:5000/api"
+  "https://322m7iq2ze.execute-api.ap-south-1.amazonaws.com/dev/api"
 );
