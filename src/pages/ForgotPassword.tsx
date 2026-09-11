@@ -1,7 +1,5 @@
 import { Link } from "react-router-dom";
 import {
-  Lock,
-  Eye,
   BookOpen,
   ShieldCheck,
   KeyRound,

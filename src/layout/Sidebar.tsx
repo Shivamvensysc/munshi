@@ -1,4 +1,3 @@
-import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -7,7 +6,6 @@ import {
   ArrowLeftRight,
   UserCircle2,
   X,
-  Sparkles,
   LogOut,
 } from "lucide-react";
 import { authService } from "../services";
