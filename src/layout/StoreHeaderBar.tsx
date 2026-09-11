@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
-import { BookOpen, Plus, ChevronDown, Check, Menu, UserCircle2 } from "lucide-react";
+import { BookOpen, Plus, ChevronDown, Check, UserCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Modal from "../components/ui/Modal";
@@ -9,11 +9,7 @@ import { khataService } from "../services";
 import { useKhata } from "../context/KhataContext";
 import type { ApiError } from "../lib/apiClient";
 
-interface StoreHeaderBarProps {
-  onMenuClick: () => void;
-}
-
-export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
+export default function StoreHeaderBar() {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -81,18 +77,8 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
   return (
     <header className="relative z-30 w-full border-b border-slate-200/70 bg-white/90 px-3 py-3 shadow-sm backdrop-blur-md sm:px-6">
       <div className="flex items-center justify-between gap-2 sm:gap-4">
-        {/* Left cluster: hamburger (mobile) + khata selector */}
+        {/* Left cluster: khata selector */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          {/* Hamburger — visible only below the lg breakpoint, where the sidebar is off-canvas */}
-          <button
-            type="button"
-            onClick={onMenuClick}
-            aria-label="Toggle menu"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-brand-900 transition-colors hover:bg-brand-50 active:scale-95 lg:hidden"
-          >
-            <Menu size={20} />
-          </button>
-
           {/* Khata Dropdown Container */}
           <div className="relative min-w-0" ref={dropdownRef}>
             {isLoadingKhatas ? (
