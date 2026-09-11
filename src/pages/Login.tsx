@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, type FormEvent } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Lock,
   Eye,
@@ -12,11 +12,12 @@ import {
 import { toast } from "react-toastify";
 import PhoneField from "../components/PhoneField";
 import Button from "../components/Button";
-
-const API_LOGIN_URL = "http://192.168.0.158:5000/api/auth/login";
+import { authService } from "../services";
+import type { ApiError } from "../lib/apiClient";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Form State
   const [mobileNumber, setMobileNumber] = useState("");
@@ -27,7 +28,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Handle Login Form Submission
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
 
     const cleanMobile = mobileNumber.replace(/\D/g, "");
@@ -45,39 +46,27 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(API_LOGIN_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          mobile_number: cleanMobile,
-          pin: pin,
-        }),
-      });
+      const data = await authService.login(cleanMobile, pin);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         toast.success(data.message || "Login successful!");
 
-        // Store tokens and user details in localStorage
-        if (data.token) localStorage.setItem("token", data.token);
-        if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
-        if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
-        if (data.khatas) localStorage.setItem("khatas", JSON.stringify(data.khatas));
-        if (data.defaultKhata) localStorage.setItem("defaultKhata", JSON.stringify(data.defaultKhata));
+        // Redirect to wherever the user was headed (RequireAuth remembers
+        // this), falling back to the dashboard.
+        const redirectTo =
+          (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ||
+          "/dashboard";
 
-        // Redirect to dashboard or home page
         setTimeout(() => {
-          navigate("/dashboard");
-        }, 1000);
+          navigate(redirectTo, { replace: true });
+        }, 600);
       } else {
         toast.error(data.message || "Invalid credentials. Please try again.");
       }
     } catch (error) {
+      const apiError = error as ApiError;
       console.error("Login API Error:", error);
-      toast.error("Unable to connect to the server. Please check your network.");
+      toast.error(apiError.message || "Unable to connect to the server. Please check your network.");
     } finally {
       setIsLoading(false);
     }
@@ -216,9 +205,10 @@ export default function Login() {
                   inputMode="numeric"
                   maxLength={4}
                   value={pin}
-                  onChange={(e) => setPin(e.target.value)}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
                   placeholder="••••"
-                  className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
+                  disabled={isLoading}
+                  className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white disabled:opacity-60"
                   required
                 />
                 <button
@@ -235,11 +225,12 @@ export default function Login() {
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={isLoading}
+              loading={isLoading}
+              loadingText="Signing In..."
               className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 active:scale-[0.99] transition-all disabled:opacity-50"
             >
               <span className="flex items-center gap-1.5">
-                {isLoading ? "Signing In..." : "Sign In"} <ArrowRight size={16} />
+                Sign In <ArrowRight size={16} />
               </span>
             </Button>
           </form>

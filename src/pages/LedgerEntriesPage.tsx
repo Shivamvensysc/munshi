@@ -1,20 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { Receipt, Loader2 } from "lucide-react";
-
-interface CustomerApiData {
-  khata_customer_id: string;
-  khata_id: string;
-  customer_id: string;
-  customer_name: string;
-  mobile_number: string;
-  address: string;
-  is_active: boolean;
-  total_lene: string;
-  total_dene: string;
-  net_balance: string;
-  last_activity_date: string | null;
-  created_at: string;
-}
+import { useState, useEffect } from "react";
+import { Receipt } from "lucide-react";
+import Spinner from "../components/ui/Spinner";
+import { customerService, type CustomerApiData } from "../services";
+import { tokenStore } from "../auth/tokenStore";
+import type { ApiError } from "../lib/apiClient";
 
 interface Entry {
   id: string;
@@ -27,48 +16,31 @@ interface Entry {
   status?: string;
 }
 
-const API_BASE_URL = "http://192.168.0.158:5000/api/parties/khata";
+// Format ISO date to readable string (e.g. 10-09-2026 12:26 PM)
+function formatDate(isoString: string | null | undefined): string {
+  if (!isoString) return "";
+  const dateObj = new Date(isoString);
+  if (isNaN(dateObj.getTime())) return isoString;
+
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const year = dateObj.getFullYear();
+
+  let hours = dateObj.getHours();
+  const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+
+  return `${day}-${month}-${year} ${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
+}
 
 export default function LedgerEntriesList() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [isFetching, setIsFetching] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Helper to retrieve active Khata ID from localStorage
-  const getKhataId = (): string | null => {
-    return localStorage.getItem("khataId");
-  };
-
-  // Helper to get authorization headers
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("token");
-    return {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-  };
-
-  // Helper function to format ISO date to readable string (e.g. 10-09-2026 12:26 PM)
-  const formatDate = (isoString: string | null): string => {
-    if (!isoString) return "";
-    const dateObj = new Date(isoString);
-    if (isNaN(dateObj.getTime())) return isoString;
-
-    const day = String(dateObj.getDate()).padStart(2, "0");
-    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const year = dateObj.getFullYear();
-
-    let hours = dateObj.getHours();
-    const minutes = String(dateObj.getMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-
-    return `${day}-${month}-${year} ${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
-  };
-
-  // GET API Call
   const fetchKhataEntries = async () => {
-    const khataId = getKhataId();
+    const khataId = tokenStore.getKhataId();
     if (!khataId) {
       setErrorMsg("No active Khata selected.");
       setIsFetching(false);
@@ -79,17 +51,12 @@ export default function LedgerEntriesList() {
     setErrorMsg(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/${khataId}`, {
-        method: "GET",
-        headers: getAuthHeaders(),
-      });
+      const data = await customerService.listByKhata(khataId);
 
-      const data = await response.json();
-
-      if (response.ok && data.success && Array.isArray(data.data)) {
+      if (data.success && Array.isArray(data.data)) {
         const mappedEntries: Entry[] = data.data.map((item: CustomerApiData) => {
-          const lene = parseFloat(item.total_lene || "0");
-          const dene = parseFloat(item.total_dene || "0");
+          const lene = parseFloat(String(item.total_lene || "0"));
+          const dene = parseFloat(String(item.total_dene || "0"));
 
           return {
             id: item.khata_customer_id,
@@ -108,8 +75,9 @@ export default function LedgerEntriesList() {
         setErrorMsg(data.message || "Failed to fetch entries.");
       }
     } catch (error) {
+      const apiError = error as ApiError;
       console.error("Fetch Entries Error:", error);
-      setErrorMsg("Unable to connect to the server.");
+      setErrorMsg(apiError.message || "Unable to connect to the server.");
     } finally {
       setIsFetching(false);
     }
@@ -117,6 +85,7 @@ export default function LedgerEntriesList() {
 
   useEffect(() => {
     fetchKhataEntries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -146,7 +115,7 @@ export default function LedgerEntriesList() {
         <div className="space-y-2.5 bg-slate-50/60 p-2.5 sm:p-3.5">
           {isFetching ? (
             <div className="flex items-center justify-center py-12 text-slate-400 gap-2 text-xs font-semibold sm:text-sm">
-              <Loader2 size={18} className="animate-spin text-brand-600" />
+              <Spinner size={18} className="text-brand-600" />
               <span>Loading transactions...</span>
             </div>
           ) : errorMsg ? (

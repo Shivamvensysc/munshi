@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent, type MouseEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Lock,
@@ -14,8 +14,8 @@ import {
 import { toast } from "react-toastify";
 import PhoneField from "../components/PhoneField";
 import Button from "../components/Button";
-
-const API_BASE_URL = "http://192.168.0.158:5000/api/auth";
+import { authService } from "../services";
+import type { ApiError } from "../lib/apiClient";
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -33,7 +33,7 @@ export default function SignUp() {
   const [showConfirmPin, setShowConfirmPin] = useState(false);
 
   // Step 1: Send OTP API Call
-  const handleSendOtp = async (e) => {
+  const handleSendOtp = async (e?: FormEvent | MouseEvent) => {
     e?.preventDefault();
 
     if (!mobileNumber || mobileNumber.replace(/\D/g, "").length < 10) {
@@ -43,39 +43,31 @@ export default function SignUp() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mobile_number: mobileNumber.replace(/\D/g, ""),
-          purpose: "REGISTRATION",
-        }),
-      });
+      const data = await authService.sendOtp(mobileNumber.replace(/\D/g, ""), "REGISTRATION");
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         toast.success(data.message || "OTP sent successfully!");
-        
+
         // Auto-fill OTP in development environment if returned by API
         if (data.otp) {
           setOtpCode(data.otp);
         }
-        
+
         setStep(2);
       } else {
         toast.error(data.message || "Failed to send OTP. Please try again.");
       }
     } catch (error) {
+      const apiError = error as ApiError;
       console.error("Send OTP Error:", error);
-      toast.error("Server connection error. Please check your network.");
+      toast.error(apiError.message || "Server connection error. Please check your network.");
     } finally {
       setIsLoading(false);
     }
   };
 
   // Step 2: Register Account API Call
-  const handleRegister = async (e) => {
+  const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
 
     const cleanMobile = mobileNumber.replace(/\D/g, "");
@@ -102,29 +94,20 @@ export default function SignUp() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mobile_number: cleanMobile,
-          otp_code: otpCode,
-          pin: pin,
-        }),
-      });
+      const data = await authService.register(cleanMobile, otpCode, pin);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (data.success) {
         toast.success(data.message || "Account registered successfully!");
         setTimeout(() => {
           navigate("/login");
-        }, 1500);
+        }, 1200);
       } else {
         toast.error(data.message || "Registration failed. Please try again.");
       }
     } catch (error) {
+      const apiError = error as ApiError;
       console.error("Registration Error:", error);
-      toast.error("Server connection error. Please check your network.");
+      toast.error(apiError.message || "Server connection error. Please check your network.");
     } finally {
       setIsLoading(false);
     }
@@ -274,16 +257,17 @@ export default function SignUp() {
                       inputMode="numeric"
                       maxLength={6}
                       value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                       placeholder="Enter 6-digit OTP"
-                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.2em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
+                      disabled={isLoading}
+                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.2em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white disabled:opacity-60"
                       required
                     />
                     <button
                       type="button"
                       onClick={handleSendOtp}
                       disabled={isLoading}
-                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 shrink-0"
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 shrink-0 disabled:opacity-50"
                     >
                       Resend
                     </button>
@@ -303,9 +287,10 @@ export default function SignUp() {
                       inputMode="numeric"
                       maxLength={4}
                       value={pin}
-                      onChange={(e) => setPin(e.target.value)}
+                      onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
                       placeholder="Enter 4-digit PIN"
-                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
+                      disabled={isLoading}
+                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white disabled:opacity-60"
                       required
                     />
                     <button
@@ -332,9 +317,10 @@ export default function SignUp() {
                       inputMode="numeric"
                       maxLength={4}
                       value={confirmPin}
-                      onChange={(e) => setConfirmPin(e.target.value)}
+                      onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
                       placeholder="Confirm 4-digit PIN"
-                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white"
+                      disabled={isLoading}
+                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm tracking-[0.3em] font-semibold text-slate-900 outline-none placeholder:tracking-normal placeholder:font-normal placeholder:text-slate-400 dark:text-white disabled:opacity-60"
                       required
                     />
                     <button
@@ -353,12 +339,11 @@ export default function SignUp() {
             {/* Submit Action */}
             <Button
               type="submit"
-              disabled={isLoading}
+              loading={isLoading}
+              loadingText="Processing..."
               className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 active:scale-[0.99] transition-all disabled:opacity-50"
             >
-              {isLoading ? (
-                <span>Processing...</span>
-              ) : step === 1 ? (
+              {step === 1 ? (
                 <span className="flex items-center gap-1.5">
                   Send Verification OTP <ArrowRight size={16} />
                 </span>

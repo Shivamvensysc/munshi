@@ -1,6 +1,13 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type FormEvent } from "react";
 import { BookOpen, Plus, ChevronDown, Check, Menu, UserCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import Modal from "../components/ui/Modal";
+import Spinner from "../components/ui/Spinner";
+import Button from "../components/Button";
+import { khataService } from "../services";
+import { tokenStore } from "../auth/tokenStore";
+import type { ApiError } from "../lib/apiClient";
 
 interface Khata {
   id: string;
@@ -17,12 +24,21 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
 
   // List of Khatas (empty by default to show "Create Khata")
   const [khatasList, setKhatasList] = useState<Khata[]>([]);
+  const [isLoadingKhatas, setIsLoadingKhatas] = useState(true);
 
-  // Selected Khata ID
-  const [selectedKhataId, setSelectedKhataId] = useState<string | null>(null);
+  // Selected Khata ID — hydrated from the persisted session so it survives
+  // navigation and page refreshes.
+  const [selectedKhataId, setSelectedKhataId] = useState<string | null>(
+    () => tokenStore.getKhataId() || null
+  );
 
   // Dropdown open/close state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Create Khata modal state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newKhataName, setNewKhataName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,13 +51,82 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleCreateKhataNavigate = () => {
-    setIsDropdownOpen(false);
-    navigate("/create-khata");
+  const persistSelection = (id: string, name: string) => {
+    setSelectedKhataId(id);
+    tokenStore.setKhataId(id);
+    tokenStore.setDefaultKhata({ id, name });
+  };
+
+  // GET /khatas — real Khata list instead of a permanently empty local array.
+  const fetchKhatas = async () => {
+    setIsLoadingKhatas(true);
+    try {
+      const data = await khataService.list();
+
+      if (data.success && Array.isArray(data.data)) {
+        const mapped: Khata[] = data.data.map((k) => ({ id: k.khata_id, name: k.khata_name }));
+        setKhatasList(mapped);
+        tokenStore.setKhatas(mapped);
+
+        if (mapped.length > 0) {
+          const stillExists = mapped.some((k) => k.id === selectedKhataId);
+          const active = stillExists ? mapped.find((k) => k.id === selectedKhataId)! : mapped[0];
+          persistSelection(active.id, active.name);
+        }
+      }
+    } catch (error) {
+      const apiError = error as ApiError;
+      console.error("Fetch Khatas Error:", error);
+      toast.error(apiError.message || "Unable to load your Khatas.");
+    } finally {
+      setIsLoadingKhatas(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchKhatas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreateKhataSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newKhataName.trim()) {
+      toast.error("Please enter a valid Khata name.");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const data = await khataService.create(newKhataName.trim());
+
+      if (data.success && data.data) {
+        toast.success(data.message || "Khata created successfully!");
+
+        const created: Khata = { id: data.data.khata_id, name: data.data.khata_name };
+        const updated = [...khatasList, created];
+        setKhatasList(updated);
+        tokenStore.setKhatas(updated);
+        persistSelection(created.id, created.name);
+
+        setNewKhataName("");
+        setIsCreateModalOpen(false);
+      } else {
+        toast.error(data.message || "Failed to create Khata.");
+      }
+    } catch (error) {
+      const apiError = error as ApiError;
+      console.error("Create Khata Error:", error);
+      toast.error(apiError.message || "Unable to connect to the server.");
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleAddCustomer = () => {
-    alert("Add Customer clicked!");
+    // "Create customer" from the header just gets the user to the
+    // Dashboard, where the actual Add Customer flow lives — and asks it to
+    // open the modal immediately so it feels like one continuous action.
+    navigate("/dashboard", { state: { openAddCustomer: true } });
   };
 
   const selectedKhata = khatasList.find((item) => item.id === selectedKhataId);
@@ -63,11 +148,16 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
 
           {/* Khata Dropdown Container */}
           <div className="relative min-w-0" ref={dropdownRef}>
-            {khatasList.length === 0 ? (
+            {isLoadingKhatas ? (
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-ink-400 sm:px-4 sm:text-sm">
+                <Spinner size={14} className="text-brand-600" />
+                <span>Loading…</span>
+              </div>
+            ) : khatasList.length === 0 ? (
               /* DEFAULT STATE: No Khata exists -> Shows "Create Khata" */
               <button
                 type="button"
-                onClick={handleCreateKhataNavigate}
+                onClick={() => setIsCreateModalOpen(true)}
                 className="flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-700 to-brand-600 px-2.5 py-2 text-xs font-semibold text-white shadow-sm shadow-brand-600/20 transition-all hover:from-brand-600 hover:to-brand-500 active:scale-95 sm:gap-2 sm:px-4 sm:text-sm cursor-pointer"
               >
                 <Plus size={16} className="shrink-0 stroke-[2.5]" />
@@ -109,7 +199,7 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
                         key={khata.id}
                         type="button"
                         onClick={() => {
-                          setSelectedKhataId(khata.id);
+                          persistSelection(khata.id, khata.name);
                           setIsDropdownOpen(false);
                         }}
                         className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-slate-50 sm:text-sm cursor-pointer ${
@@ -130,7 +220,10 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
                 <div className="mt-1 border-t border-slate-100 pt-1">
                   <button
                     type="button"
-                    onClick={handleCreateKhataNavigate}
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setIsCreateModalOpen(true);
+                    }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-brand-600 transition-colors hover:bg-brand-50 sm:text-sm cursor-pointer"
                   >
                     <Plus size={15} className="stroke-[2.5]" />
@@ -153,16 +246,52 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
             <span className="whitespace-nowrap">Add Customer</span>
           </button>
 
+          {/* Was `hidden sm:flex` before — completely unreachable on phones.
+              Always shown now so the account page is reachable on every screen size. */}
           <button
             type="button"
             onClick={() => navigate("/account-profile-page")}
             aria-label="Account"
-            className="hidden h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-brand-700 transition-colors hover:bg-brand-50 sm:flex"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-brand-700 transition-colors hover:bg-brand-50 active:scale-95"
           >
             <UserCircle2 size={20} />
           </button>
         </div>
       </div>
+
+      {/* CREATE NEW KHATA MODAL */}
+      <Modal
+        open={isCreateModalOpen}
+        onClose={() => !isCreating && setIsCreateModalOpen(false)}
+        title="New Khata"
+        preventClose={isCreating}
+        size="sm"
+      >
+        <form onSubmit={handleCreateKhataSubmit} className="flex flex-col gap-4 p-5 sm:p-6">
+          <div className="space-y-1">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+              <input
+                type="text"
+                maxLength={20}
+                required
+                autoFocus
+                disabled={isCreating}
+                value={newKhataName}
+                onChange={(e) => setNewKhataName(e.target.value)}
+                placeholder="Enter Shop/Business Name"
+                className="w-full bg-transparent text-sm font-medium text-ink-900 outline-none placeholder:text-ink-300 disabled:opacity-50"
+              />
+            </div>
+            <div className="text-right text-[11px] font-medium text-ink-300">
+              {newKhataName.length}/20
+            </div>
+          </div>
+
+          <Button type="submit" loading={isCreating} loadingText="Creating...">
+            Create Khata
+          </Button>
+        </form>
+      </Modal>
     </header>
   );
 }

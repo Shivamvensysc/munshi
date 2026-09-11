@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   User,
   Settings,
@@ -14,10 +14,28 @@ import {
   ExternalLink,
   Phone,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import Modal from "../components/ui/Modal";
+import Button from "../components/Button";
+import { authService } from "../services";
+import { tokenStore } from "../auth/tokenStore";
 
 export default function AccountProfilePage() {
-  const [storeName, setStoreName] = useState("Maa Sharda Store");
+  const navigate = useNavigate();
+
+  // Real logged-in user, cached at login time — replaces the hardcoded
+  // "Maa Sharda Store" placeholder that never reflected who was signed in.
+  const cachedUser = authService.getCachedUser();
+
+  const [storeName, setStoreName] = useState(
+    (cachedUser?.name as string | undefined) || "My Store"
+  );
   const [isEditing, setIsEditing] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const phoneNumber = (cachedUser?.phone as string | undefined) || null;
 
   // Accordion Expand/Collapse States (All set to false by default)
   const [openAccount, setOpenAccount] = useState(false);
@@ -26,8 +44,24 @@ export default function AccountProfilePage() {
   const [openHelpSupport, setOpenHelpSupport] = useState(false);
   const [openAboutUs, setOpenAboutUs] = useState(false);
 
-  const handleLogout = () => {
-    alert("Logged out successfully");
+  const handleSaveName = () => {
+    setIsEditing(false);
+    // Persist locally so the new name survives navigation within this
+    // session. There is no PATCH /auth/profile endpoint on the backend yet
+    // to persist it server-side — wire that up here once it exists.
+    tokenStore.setUser({ ...(cachedUser || {}), name: storeName });
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      authService.logout();
+      toast.success("Logged out successfully");
+      navigate("/login", { replace: true });
+    } finally {
+      setIsLoggingOut(false);
+      setIsLogoutModalOpen(false);
+    }
   };
 
   const initials = storeName
@@ -62,14 +96,17 @@ export default function AccountProfilePage() {
                   type="text"
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
-                  onBlur={() => setIsEditing(false)}
+                  onBlur={handleSaveName}
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
                   autoFocus
                   className="w-full border-b border-white/40 bg-transparent text-base font-bold text-white outline-none"
                 />
               ) : (
                 <h2 className="truncate text-base font-bold text-white">{storeName}</h2>
               )}
-              <p className="text-[11px] font-medium text-white/70">Store Owner Account</p>
+              <p className="truncate text-[11px] font-medium text-white/70">
+                {phoneNumber ? `+91 ${phoneNumber}` : "Store Owner Account"}
+              </p>
             </div>
           </div>
 
@@ -114,6 +151,12 @@ export default function AccountProfilePage() {
 
             {openAccount && (
               <div className="border-t border-slate-100 bg-white">
+                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 text-xs font-semibold text-ink-500">
+                  <span>Mobile Number</span>
+                  <span className="font-bold text-ink-800">
+                    {phoneNumber ? `+91 ${phoneNumber}` : "—"}
+                  </span>
+                </div>
                 <a
                   href="#profile"
                   className="block border-b border-slate-100 px-4 py-3 text-xs font-semibold text-ink-500 transition-colors hover:bg-slate-50"
@@ -341,7 +384,7 @@ export default function AccountProfilePage() {
           {/* 8. Logout Action Button */}
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setIsLogoutModalOpen(true)}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-800/30 bg-white py-3 text-xs font-bold text-violet-800 transition-all hover:bg-violet-50 active:scale-[0.99]"
           >
             <LogOut size={16} />
@@ -349,6 +392,39 @@ export default function AccountProfilePage() {
           </button>
         </div>
       </div>
+
+      {/* LOGOUT CONFIRMATION MODAL */}
+      <Modal
+        open={isLogoutModalOpen}
+        onClose={() => !isLoggingOut && setIsLogoutModalOpen(false)}
+        title="Log out?"
+        preventClose={isLoggingOut}
+        size="sm"
+        tone="danger"
+      >
+        <div className="flex flex-col gap-4 p-5 sm:p-6">
+          <p className="text-center text-sm font-medium text-ink-500">
+            You'll need your mobile number and PIN to sign back in.
+          </p>
+          <div className="flex flex-col gap-2.5 sm:flex-row-reverse">
+            <Button
+              variant="danger"
+              loading={isLoggingOut}
+              loadingText="Logging out..."
+              onClick={handleLogout}
+            >
+              Yes, Log Out
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={isLoggingOut}
+              onClick={() => setIsLogoutModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
