@@ -17,7 +17,7 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Shared khata state — the same values every page reads via useKhata(),
+  // Shared khata state are  — the same values every page reads via useKhata(),
   // so selecting a khata here is instantly visible everywhere else too.
   const { khatasList, isLoadingKhatas, selectedKhataId, selectedKhata, selectKhata, addKhata } =
     useKhata();
