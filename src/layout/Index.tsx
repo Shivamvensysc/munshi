@@ -31,7 +31,7 @@ const Index: React.FC = () => {
           </div>
 
           {/* Main Content Area (Scrollable Middle Body) */}
-          <main className="flex-1 overflow-y-auto bg-ink-50 p-2 sm:p-4 md:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto bg-ink-50 p-2 sm:p-4 ">
             <div className="mx-auto max-w-7xl">
               <Outlet />
             </div>
