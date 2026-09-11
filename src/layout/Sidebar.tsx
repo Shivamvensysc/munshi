@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   BookOpen,
@@ -8,7 +8,9 @@ import {
   UserCircle2,
   X,
   Sparkles,
+  LogOut,
 } from "lucide-react";
+import { authService } from "../services";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -24,6 +26,14 @@ const navItems = [
 ];
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    authService.logout();
+    onClose();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <>
       {/* Mobile backdrop overlay — only rendered while the sidebar is open on small screens */}
@@ -114,19 +124,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         <div className="relative z-10 mx-5 h-px bg-white/10" />
 
-        {/* Footer promo card */}
+        {/* Footer promo card + Logout */}
         <div className="relative z-10 p-4">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-xl">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-400/20">
-                <Sparkles size={15} />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white">27 Free Days Left</p>
-                <p className="text-[11px] text-slate-400">Upgrade for unlimited khatas</p>
-              </div>
-            </div>
-          </div>
+         
+         
+
+          {/* Logout */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-2.5 text-sm font-semibold text-rose-300 transition-all hover:border-rose-500/40 hover:bg-rose-500/20 hover:text-rose-200 active:scale-[0.98]"
+          >
+            <LogOut size={16} />
+            <span>Logout</span>
+          </button>
+
           <p className="mt-3 text-center text-[10px] font-medium text-slate-500">
             Munshi — Daily Expenses Manager
           </p>

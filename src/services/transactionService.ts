@@ -29,6 +29,13 @@ export interface NewTransactionInput {
   description: string;
 }
 
+export interface UpdateTransactionInput {
+  amount: number;
+  description: string;
+  reference_number?: string;
+  transaction_date?: string;
+}
+
 export interface StatementReportResponse {
   success: boolean;
   message?: string;
@@ -66,6 +73,19 @@ export const transactionService = {
   /** POST /transactions */
   create(input: NewTransactionInput) {
     return apiClient.post<{ success: boolean; message?: string }>("/transactions", input);
+  },
+
+  /** PUT /transactions/:id */
+  update(id: string, input: UpdateTransactionInput) {
+    return apiClient.put<{ success: boolean; message?: string; data?: TransactionApiData }>(
+      `/transactions/${id}`,
+      input
+    );
+  },
+
+  /** DELETE /transactions/:id */
+  remove(id: string) {
+    return apiClient.delete<{ success: boolean; message?: string }>(`/transactions/${id}`);
   },
 
   /** POST /monday-final */

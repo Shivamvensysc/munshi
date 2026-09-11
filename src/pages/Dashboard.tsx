@@ -15,7 +15,7 @@ import Modal from "../components/ui/Modal";
 import Spinner from "../components/ui/Spinner";
 import Button from "../components/Button";
 import { customerService, khataService, type CustomerApiData } from "../services";
-import { tokenStore } from "../auth/tokenStore";
+import { useKhata } from "../context/KhataContext";
 import type { ApiError } from "../lib/apiClient";
 
 interface Customer {
@@ -40,6 +40,7 @@ function initials(name: string) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { selectedKhataId } = useKhata();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -123,8 +124,7 @@ export default function Dashboard() {
 
   // GET API: Fetch customer list & stats in parallel
   const fetchDashboardData = async () => {
-    const khataId = tokenStore.getKhataId();
-    if (!khataId) {
+    if (!selectedKhataId) {
       toast.error("No Khata selected. Please select a Khata first.");
       setIsFetching(false);
       return;
@@ -134,8 +134,8 @@ export default function Dashboard() {
 
     try {
       const [customersData, statsData] = await Promise.all([
-        customerService.listByKhata(khataId),
-        khataService.stats(khataId),
+        customerService.listByKhata(selectedKhataId),
+        khataService.stats(selectedKhataId),
       ]);
 
       // Handle Customers List
@@ -165,8 +165,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+    // Re-run whenever the active khata changes (header dropdown) so the
+    // dashboard refreshes immediately instead of waiting for a route change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedKhataId]);
 
   // Filter and Sort Customers
   const filteredCustomers = customers
@@ -201,8 +203,7 @@ export default function Dashboard() {
       return;
     }
 
-    const khataId = tokenStore.getKhataId();
-    if (!khataId) {
+    if (!selectedKhataId) {
       toast.error("No active Khata ID found. Please select a Khata first.");
       return;
     }
@@ -210,7 +211,7 @@ export default function Dashboard() {
     setIsSubmitting(true);
 
     try {
-      const data = await customerService.create(khataId, {
+      const data = await customerService.create(selectedKhataId, {
         customer_name: newCustomerName.trim(),
         mobile_number: newContactNo.trim(),
         address: newAddress.trim(),

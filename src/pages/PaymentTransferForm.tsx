@@ -3,10 +3,12 @@ import { ArrowLeftRight, IndianRupee, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import Button from "../components/Button";
 import { customerService, paymentService, type CustomerApiData } from "../services";
-import { tokenStore } from "../auth/tokenStore";
+import { useKhata } from "../context/KhataContext";
 import type { ApiError } from "../lib/apiClient";
 
 export default function PaymentTransferForm() {
+  const { selectedKhataId } = useKhata();
+
   // Form State
   const [toCustomer, setToCustomer] = useState<string>("");
   const [fromCustomer, setFromCustomer] = useState<string>("");
@@ -20,9 +22,7 @@ export default function PaymentTransferForm() {
 
   // Fetch Customer List for the currently active Khata
   const fetchCustomers = useCallback(async () => {
-    const khataId = tokenStore.getKhataId();
-
-    if (!khataId) {
+    if (!selectedKhataId) {
       toast.error("No active Khata selected. Please choose a Khata first.");
       setIsLoading(false);
       return;
@@ -31,7 +31,7 @@ export default function PaymentTransferForm() {
     setIsLoading(true);
 
     try {
-      const result = await customerService.listByKhata(khataId);
+      const result = await customerService.listByKhata(selectedKhataId);
 
       if (result.success && Array.isArray(result.data)) {
         setCustomersList(result.data);
@@ -45,9 +45,11 @@ export default function PaymentTransferForm() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedKhataId]);
 
   useEffect(() => {
+    // Re-runs automatically whenever selectedKhataId changes, since
+    // fetchCustomers is recreated with the new id (see dependency above).
     fetchCustomers();
   }, [fetchCustomers]);
 
@@ -71,8 +73,7 @@ export default function PaymentTransferForm() {
       return;
     }
 
-    const khataId = tokenStore.getKhataId();
-    if (!khataId) {
+    if (!selectedKhataId) {
       toast.error("No active Khata selected. Please choose a Khata first.");
       return;
     }
@@ -81,7 +82,7 @@ export default function PaymentTransferForm() {
 
     try {
       const result = await paymentService.createCrossEntry({
-        khata_id: khataId,
+        khata_id: selectedKhataId,
         from_customer_id: fromCustomer,
         to_customer_id: toCustomer,
         amount: parsedAmount,

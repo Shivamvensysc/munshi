@@ -1,18 +1,12 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Plus, BookOpen, Check, Eye } from "lucide-react";
 import { toast } from "react-toastify";
 import Modal from "../components/ui/Modal";
 import Spinner from "../components/ui/Spinner";
 import Button from "../components/Button";
 import { khataService } from "../services";
-import { tokenStore, type StoredKhata } from "../auth/tokenStore";
+import { useKhata } from "../context/KhataContext";
 import type { ApiError } from "../lib/apiClient";
-
-interface KhataItem {
-  id: string;
-  name: string;
-  avatarText: string;
-}
 
 // Helper function to extract initials from name
 function getInitials(name: string): string {
@@ -24,67 +18,17 @@ function getInitials(name: string): string {
 }
 
 export default function KhataList() {
-  const [khatas, setKhatas] = useState<KhataItem[]>([]);
+  // Shared khata state — same list/selection the header uses, so choosing a
+  // khata here instantly updates the header and every other page too.
+  const { khatasList, isLoadingKhatas, selectedKhataId, selectKhata, addKhata } = useKhata();
 
-  // Read initial selected ID from the secure session store
-  const [selectedKhataId, setSelectedKhataId] = useState<string>(
-    () => tokenStore.getKhataId() || ""
-  );
-
-  const [isFetching, setIsFetching] = useState<boolean>(true);
+  const khatas = khatasList.map((k) => ({ ...k, avatarText: getInitials(k.name) }));
+  const isFetching = isLoadingKhatas;
 
   // State for Create New Khata Modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newKhataName, setNewKhataName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Helper to handle selection and persist it
-  const handleSelectKhata = (id: string, name?: string) => {
-    setSelectedKhataId(id);
-    tokenStore.setKhataId(id);
-    if (name) {
-      tokenStore.setDefaultKhata({ id, name } as StoredKhata);
-    }
-  };
-
-  // GET API: Fetch Khatas list
-  const fetchKhatas = async () => {
-    setIsFetching(true);
-    try {
-      const data = await khataService.list();
-
-      if (data.success && Array.isArray(data.data)) {
-        const mappedKhatas: KhataItem[] = data.data.map((item) => ({
-          id: item.khata_id,
-          name: item.khata_name,
-          avatarText: getInitials(item.khata_name),
-        }));
-
-        setKhatas(mappedKhatas);
-        tokenStore.setKhatas(mappedKhatas.map((k) => ({ id: k.id, name: k.name })));
-
-        if (mappedKhatas.length > 0) {
-          const exists = mappedKhatas.some((k) => k.id === selectedKhataId);
-          const activeId = exists ? selectedKhataId : mappedKhatas[0].id;
-          const activeKhata = mappedKhatas.find((k) => k.id === activeId);
-          handleSelectKhata(activeId, activeKhata?.name);
-        }
-      } else {
-        toast.error(data.message || "Failed to load Khatas.");
-      }
-    } catch (error) {
-      const apiError = error as ApiError;
-      console.error("Fetch Khatas Error:", error);
-      toast.error(apiError.message || "Unable to connect to the server. Please check network.");
-    } finally {
-      setIsFetching(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchKhatas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // POST API: Create New Khata
   const handleCreateKhataSubmit = async (e: FormEvent) => {
@@ -102,17 +46,7 @@ export default function KhataList() {
       if (data.success && data.data) {
         toast.success(data.message || "Khata created successfully!");
 
-        const createdItem: KhataItem = {
-          id: data.data.khata_id,
-          name: data.data.khata_name,
-          avatarText: getInitials(data.data.khata_name),
-        };
-
-        const updated = [...khatas, createdItem];
-        setKhatas(updated);
-        tokenStore.setKhatas(updated.map((k) => ({ id: k.id, name: k.name })));
-
-        handleSelectKhata(createdItem.id, createdItem.name);
+        addKhata({ id: data.data.khata_id, name: data.data.khata_name });
 
         setNewKhataName("");
         setIsCreateModalOpen(false);
@@ -164,7 +98,7 @@ export default function KhataList() {
                   <button
                     key={khata.id}
                     type="button"
-                    onClick={() => handleSelectKhata(khata.id, khata.name)}
+                    onClick={() => selectKhata(khata.id, khata.name)}
                     className={`flex w-full items-center gap-3.5 rounded-xl p-3.5 text-left transition-all ${
                       isSelected ? "bg-brand-50/70 ring-1 ring-brand-200" : "hover:bg-slate-50"
                     }`}

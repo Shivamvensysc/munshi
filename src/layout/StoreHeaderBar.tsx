@@ -6,13 +6,8 @@ import Modal from "../components/ui/Modal";
 import Spinner from "../components/ui/Spinner";
 import Button from "../components/Button";
 import { khataService } from "../services";
-import { tokenStore } from "../auth/tokenStore";
+import { useKhata } from "../context/KhataContext";
 import type { ApiError } from "../lib/apiClient";
-
-interface Khata {
-  id: string;
-  name: string;
-}
 
 interface StoreHeaderBarProps {
   onMenuClick: () => void;
@@ -22,15 +17,10 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // List of Khatas (empty by default to show "Create Khata")
-  const [khatasList, setKhatasList] = useState<Khata[]>([]);
-  const [isLoadingKhatas, setIsLoadingKhatas] = useState(true);
-
-  // Selected Khata ID — hydrated from the persisted session so it survives
-  // navigation and page refreshes.
-  const [selectedKhataId, setSelectedKhataId] = useState<string | null>(
-    () => tokenStore.getKhataId() || null
-  );
+  // Shared khata state — the same values every page reads via useKhata(),
+  // so selecting a khata here is instantly visible everywhere else too.
+  const { khatasList, isLoadingKhatas, selectedKhataId, selectedKhata, selectKhata, addKhata } =
+    useKhata();
 
   // Dropdown open/close state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -51,43 +41,6 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const persistSelection = (id: string, name: string) => {
-    setSelectedKhataId(id);
-    tokenStore.setKhataId(id);
-    tokenStore.setDefaultKhata({ id, name });
-  };
-
-  // GET /khatas — real Khata list instead of a permanently empty local array.
-  const fetchKhatas = async () => {
-    setIsLoadingKhatas(true);
-    try {
-      const data = await khataService.list();
-
-      if (data.success && Array.isArray(data.data)) {
-        const mapped: Khata[] = data.data.map((k) => ({ id: k.khata_id, name: k.khata_name }));
-        setKhatasList(mapped);
-        tokenStore.setKhatas(mapped);
-
-        if (mapped.length > 0) {
-          const stillExists = mapped.some((k) => k.id === selectedKhataId);
-          const active = stillExists ? mapped.find((k) => k.id === selectedKhataId)! : mapped[0];
-          persistSelection(active.id, active.name);
-        }
-      }
-    } catch (error) {
-      const apiError = error as ApiError;
-      console.error("Fetch Khatas Error:", error);
-      toast.error(apiError.message || "Unable to load your Khatas.");
-    } finally {
-      setIsLoadingKhatas(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchKhatas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleCreateKhataSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!newKhataName.trim()) {
@@ -102,11 +55,7 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
       if (data.success && data.data) {
         toast.success(data.message || "Khata created successfully!");
 
-        const created: Khata = { id: data.data.khata_id, name: data.data.khata_name };
-        const updated = [...khatasList, created];
-        setKhatasList(updated);
-        tokenStore.setKhatas(updated);
-        persistSelection(created.id, created.name);
+        addKhata({ id: data.data.khata_id, name: data.data.khata_name });
 
         setNewKhataName("");
         setIsCreateModalOpen(false);
@@ -128,8 +77,6 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
     // open the modal immediately so it feels like one continuous action.
     navigate("/dashboard", { state: { openAddCustomer: true } });
   };
-
-  const selectedKhata = khatasList.find((item) => item.id === selectedKhataId);
 
   return (
     <header className="relative z-30 w-full border-b border-slate-200/70 bg-white/90 px-3 py-3 shadow-sm backdrop-blur-md sm:px-6">
@@ -199,7 +146,7 @@ export default function StoreHeaderBar({ onMenuClick }: StoreHeaderBarProps) {
                         key={khata.id}
                         type="button"
                         onClick={() => {
-                          persistSelection(khata.id, khata.name);
+                          selectKhata(khata.id, khata.name);
                           setIsDropdownOpen(false);
                         }}
                         className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-slate-50 sm:text-sm cursor-pointer ${

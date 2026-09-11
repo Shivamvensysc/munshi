@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Receipt } from "lucide-react";
 import Spinner from "../components/ui/Spinner";
 import { customerService, type CustomerApiData } from "../services";
-import { tokenStore } from "../auth/tokenStore";
+import { useKhata } from "../context/KhataContext";
 import type { ApiError } from "../lib/apiClient";
 
 interface Entry {
@@ -35,13 +35,13 @@ function formatDate(isoString: string | null | undefined): string {
 }
 
 export default function LedgerEntriesList() {
+  const { selectedKhataId } = useKhata();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [isFetching, setIsFetching] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchKhataEntries = async () => {
-    const khataId = tokenStore.getKhataId();
-    if (!khataId) {
+    if (!selectedKhataId) {
       setErrorMsg("No active Khata selected.");
       setIsFetching(false);
       return;
@@ -51,7 +51,7 @@ export default function LedgerEntriesList() {
     setErrorMsg(null);
 
     try {
-      const data = await customerService.listByKhata(khataId);
+      const data = await customerService.listByKhata(selectedKhataId);
 
       if (data.success && Array.isArray(data.data)) {
         const mappedEntries: Entry[] = data.data.map((item: CustomerApiData) => {
@@ -85,8 +85,9 @@ export default function LedgerEntriesList() {
 
   useEffect(() => {
     fetchKhataEntries();
+    // Re-fetch whenever the active khata changes in the header.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedKhataId]);
 
   return (
     <div className="w-full font-sans text-ink-900">
