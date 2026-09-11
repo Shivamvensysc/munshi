@@ -568,7 +568,7 @@ export default function Dashboard() {
           {/* Contact No Input with Country Code */}
           <div>
             <div className="flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
-              <div className="mr-3 flex items-center gap-1.5 border-r border-slate-200 pr-3 text-xs font-bold text-ink-700">
+              <div className="mr-3 flex shrink-0 items-center gap-1.5 whitespace-nowrap border-r border-slate-200 pr-3 text-xs font-bold text-ink-700">
                 <span className="text-base leading-none">🇮🇳</span>
                 <span>+91</span>
                 <span className="text-[10px] text-ink-300">▼</span>

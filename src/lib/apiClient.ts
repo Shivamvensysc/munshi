@@ -10,8 +10,10 @@
  *   - a single normalized error shape (ApiError) instead of every page
  *     re-implementing its own try/catch/parse dance
  *   - a request/response "interceptor": any authenticated call that comes
- *     back 401 Unauthorized automatically clears the session and redirects
- *     to /login — no page has to remember to do that itself
+ *     back 401 Unauthorized first tries a silent refresh (via the stored
+ *     refresh token) and retries once; only if that also fails does it
+ *     clear the session and redirect to /login — no page has to remember
+ *     to do any of that itself
  *
  * This intentionally does not depend on axios — it's a thin wrapper around
  * the native `fetch`, so it works with zero extra dependencies.
@@ -36,6 +38,8 @@ export interface RequestOptions extends RequestInit {
   redirectOnUnauthorized?: boolean;
   /** Abort/timeout signal is derived automatically unless you pass your own. */
   timeout?: number;
+  /** @internal set automatically when retrying after a silent token refresh — do not pass this yourself. */
+  _isRetryAfterRefresh?: boolean;
 }
 
 const DEFAULT_TIMEOUT = 30_000;
@@ -56,6 +60,57 @@ function triggerUnauthorizedRedirect() {
   } else if (typeof window !== "undefined") {
     window.location.assign("/login");
   }
+}
+
+/**
+ * Silent refresh: exchanges the refresh token for a new access token.
+ *
+ * Implemented as a raw `fetch` (not via `apiRequest`) so it never recurses
+ * into this same 401-handling logic, and doesn't depend on authService
+ * (which itself depends on this file) — that would be a circular import.
+ *
+ * Multiple requests can 401 around the same time (e.g. a page firing
+ * several calls in parallel). `refreshPromise` makes sure only ONE network
+ * call to /auth/refresh-token happens; every other caller just awaits the
+ * same in-flight promise instead of hammering the endpoint.
+ *
+ * NOTE: path + response shape ("token" / "refreshToken") are assumed to
+ * mirror /auth/login. Update here if the backend's refresh endpoint differs.
+ */
+let refreshPromise: Promise<string | null> | null = null;
+
+function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = tokenStore.getRefreshToken();
+  if (!refreshToken) return Promise.resolve(null);
+
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        const raw = await parseBody(response);
+        const data = raw as { success?: boolean; token?: string; refreshToken?: string } | null;
+
+        if (!response.ok || !data?.success || !data.token) {
+          return null;
+        }
+
+        tokenStore.setAccessToken(data.token);
+        if (data.refreshToken) tokenStore.setRefreshToken(data.refreshToken);
+        return data.token;
+      } catch {
+        return null;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  }
+
+  return refreshPromise;
 }
 
 async function parseBody(response: Response): Promise<unknown> {
@@ -100,6 +155,7 @@ export async function apiRequest<T = unknown>(
     redirectOnUnauthorized = auth,
     timeout = DEFAULT_TIMEOUT,
     headers,
+    _isRetryAfterRefresh = false,
     ...rest
   } = options;
 
@@ -142,6 +198,19 @@ export async function apiRequest<T = unknown>(
   const raw = await parseBody(response);
 
   if (response.status === 401 && redirectOnUnauthorized) {
+    // Don't give up on the very first 401 — the access token may simply have
+    // expired. Try exchanging the refresh token for a new access token and
+    // replaying this exact request once. Only if that also fails (refresh
+    // token missing/expired/revoked) do we actually clear the session and
+    // send the user to /login. A logged-in user should only ever be logged
+    // out by clicking Logout, or by their refresh token itself expiring.
+    if (!_isRetryAfterRefresh) {
+      const newAccessToken = await refreshAccessToken();
+      if (newAccessToken) {
+        return apiRequest<T>(path, { ...options, _isRetryAfterRefresh: true });
+      }
+    }
+
     triggerUnauthorizedRedirect();
     throw {
       message: "Your session has expired. Please sign in again.",

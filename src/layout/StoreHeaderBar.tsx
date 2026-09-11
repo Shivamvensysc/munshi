@@ -75,7 +75,7 @@ export default function StoreHeaderBar() {
   };
 
   return (
-    <header className="relative z-30 w-full border-b border-slate-200/70 bg-white/90 px-3 py-3 shadow-sm backdrop-blur-md sm:px-6">
+    <header className="relative z-40 w-full border-b border-slate-200/70 bg-white/90 px-3 py-3 shadow-sm backdrop-blur-md sm:px-6">
       <div className="flex items-center justify-between gap-2 sm:gap-4">
         {/* Left cluster: khata selector */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">

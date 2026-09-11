@@ -23,7 +23,7 @@ export default function PhoneField({
           error ? "border-debit-500" : "border-ink-100"
         } ${disabled ? "opacity-60" : ""}`}
       >
-        <span className="flex items-center gap-1.5 border-r border-ink-100 py-3 pr-3 text-sm font-medium text-ink-700">
+        <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap border-r border-ink-100 py-3 pr-3 text-sm font-medium text-ink-700">
           <span aria-hidden className="text-base leading-none">🇮🇳</span>
           +91
         </span>

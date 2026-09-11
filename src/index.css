@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 @theme {
+  /* Custom breakpoint between the default base and `sm` (640px) — used for
+     a couple of graduated-truncation spots (e.g. the khata name in the
+     header) so tiny phones and slightly bigger phones both get a sensible
+     max-width instead of jumping straight from mobile to `sm`. */
+  --breakpoint-xs: 420px;
+
   /* Brand blue - the ledger header / navigation gradient */
   --color-brand-950: #0a1f52;
   --color-brand-900: #0f2a68;
