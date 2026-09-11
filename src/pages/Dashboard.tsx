@@ -9,12 +9,19 @@ import {
   TrendingDown,
   TrendingUp,
   Users,
+  IndianRupee,
+  Loader2,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import Modal from "../components/ui/Modal";
 import Spinner from "../components/ui/Spinner";
 import Button from "../components/Button";
-import { customerService, khataService, type CustomerApiData } from "../services";
+import {
+  customerService,
+  khataService,
+  transactionService,
+  type CustomerApiData,
+} from "../services";
 import { useKhata } from "../context/KhataContext";
 import type { ApiError } from "../lib/apiClient";
 
@@ -57,6 +64,14 @@ export default function Dashboard() {
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newContactNo, setNewContactNo] = useState("");
   const [newAddress, setNewAddress] = useState("");
+
+  // "Add Single" Transaction Popup State (bottom-right + icon on Dashboard)
+  const [isAddTxnModalOpen, setIsAddTxnModalOpen] = useState(false);
+  const [isSubmittingTxn, setIsSubmittingTxn] = useState(false);
+  const [txnCustomerId, setTxnCustomerId] = useState("");
+  const [txnType, setTxnType] = useState<"" | "LENE" | "DENE">("");
+  const [txnAmount, setTxnAmount] = useState("");
+  const [txnDescription, setTxnDescription] = useState("");
 
   // Calculated totals state from Khata Stats API
   const [totalLene, setTotalLene] = useState<number>(0);
@@ -240,6 +255,63 @@ export default function Dashboard() {
       toast.error(apiError.message || "Unable to connect to the server.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const resetTxnForm = () => {
+    setTxnCustomerId("");
+    setTxnType("");
+    setTxnAmount("");
+    setTxnDescription("");
+  };
+
+  // POST API: Add Single Transaction (LENE / DENE) from the Dashboard's
+  // floating "+" icon — separate from the "Add Customer" flow above.
+  const handleAddTransactionSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!txnCustomerId) {
+      toast.error("Please select a customer.");
+      return;
+    }
+
+    if (txnType !== "LENE" && txnType !== "DENE") {
+      toast.error("Please select a transaction type.");
+      return;
+    }
+
+    const parsedAmount = parseFloat(txnAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast.error("Please enter a valid amount greater than zero.");
+      return;
+    }
+
+    setIsSubmittingTxn(true);
+
+    try {
+      const data = await transactionService.create({
+        khata_customer_id: txnCustomerId,
+        amount: parsedAmount,
+        transaction_type: txnType,
+        description: txnDescription.trim(),
+      });
+
+      if (data.success) {
+        toast.success(data.message || "Transaction added successfully!");
+        resetTxnForm();
+        setIsAddTxnModalOpen(false);
+
+        // Refresh customer list & stats so balances reflect the new entry.
+        fetchDashboardData();
+      } else {
+        toast.error(data.message || "Failed to add transaction.");
+      }
+    } catch (error) {
+      const apiError = error as ApiError;
+      console.error("Add Transaction Error:", error);
+      toast.error(apiError.message || "Unable to connect to the server.");
+    } finally {
+      setIsSubmittingTxn(false);
     }
   };
 
@@ -456,6 +528,18 @@ export default function Dashboard() {
         <Plus size={24} className="stroke-[2.5]" />
       </button>
 
+      {/* Floating add-transaction trigger — bottom right corner on every
+          screen size, sits well clear of the fixed bottom nav bar and the
+          mobile-only Add Customer FAB above. */}
+      <button
+        type="button"
+        onClick={() => setIsAddTxnModalOpen(true)}
+        aria-label="Add Transaction"
+        className="fixed bottom-24 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-600 to-blue-600 text-white shadow-lift transition-all active:scale-95 sm:right-6"
+      >
+        <Plus size={24} className="stroke-[2.5]" />
+      </button>
+
       {/* NEW CUSTOMER POPUP MODAL */}
       <Modal
         open={isAddModalOpen}
@@ -519,6 +603,118 @@ export default function Dashboard() {
           {/* Continue Submit Button */}
           <Button type="submit" loading={isSubmitting} loadingText="Adding Customer...">
             Continue
+          </Button>
+        </form>
+      </Modal>
+
+      {/* ADD SINGLE TRANSACTION POPUP MODAL — triggered by the bottom-right + icon */}
+      <Modal
+        open={isAddTxnModalOpen}
+        onClose={() => {
+          if (isSubmittingTxn) return;
+          setIsAddTxnModalOpen(false);
+          resetTxnForm();
+        }}
+        title="Add Single"
+        preventClose={isSubmittingTxn}
+      >
+        <form onSubmit={handleAddTransactionSubmit} className="flex flex-col gap-4 p-5 sm:p-6">
+          {/* Customer Dropdown */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-bold text-ink-700">Customer</label>
+            <div className="relative rounded-xl border border-slate-200 bg-white shadow-2xs transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+              <select
+                required
+                disabled={isSubmittingTxn || isFetching}
+                value={txnCustomerId}
+                onChange={(e) => setTxnCustomerId(e.target.value)}
+                className="w-full cursor-pointer appearance-none rounded-xl bg-transparent px-3.5 py-3 text-sm font-medium text-ink-700 outline-none disabled:opacity-50"
+              >
+                <option value="" disabled>
+                  {isFetching ? "Loading customers..." : "Select Customer"}
+                </option>
+                {customers.map((cust) => (
+                  <option key={cust.id} value={cust.id}>
+                    {cust.name}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-ink-300">
+                {isFetching ? <Loader2 size={14} className="animate-spin" /> : "▼"}
+              </div>
+            </div>
+          </div>
+
+          {/* Transaction Type Dropdown (LENE / DENE) */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-bold text-ink-700">Type</label>
+            <div className="relative rounded-xl border border-slate-200 bg-white shadow-2xs transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+              <select
+                required
+                disabled={isSubmittingTxn}
+                value={txnType}
+                onChange={(e) => setTxnType(e.target.value as "" | "LENE" | "DENE")}
+                className="w-full cursor-pointer appearance-none rounded-xl bg-transparent px-3.5 py-3 text-sm font-medium text-ink-700 outline-none disabled:opacity-50"
+              >
+                <option value="" disabled>
+                  Select Type
+                </option>
+                <option value="LENE">LENE (You&apos;ll Get)</option>
+                <option value="DENE">DENE (You&apos;ll Give)</option>
+              </select>
+              <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-ink-300">
+                ▼
+              </div>
+            </div>
+          </div>
+
+          {/* Amount Input */}
+          <div className="space-y-1">
+            <label className="block text-sm font-bold text-ink-700">Amount</label>
+            <div className="relative flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-2xs transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+              <IndianRupee size={15} className="mr-2 shrink-0 text-ink-300" />
+              <input
+                type="number"
+                step="any"
+                required
+                disabled={isSubmittingTxn}
+                value={txnAmount}
+                onChange={(e) => {
+                  if (e.target.value.length <= 9) {
+                    setTxnAmount(e.target.value);
+                  }
+                }}
+                placeholder="Enter Amount"
+                className="w-full bg-transparent text-sm font-bold text-ink-700 outline-none placeholder:font-bold placeholder:text-ink-300 disabled:opacity-50"
+              />
+            </div>
+            <div className="text-right text-[11px] font-medium text-ink-300">
+              {txnAmount.length}/9
+            </div>
+          </div>
+
+          {/* Details Input */}
+          <div className="space-y-1">
+            <label className="block text-sm font-bold text-ink-700">Details</label>
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-2xs transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+              <input
+                type="text"
+                maxLength={100}
+                disabled={isSubmittingTxn}
+                value={txnDescription}
+                onChange={(e) => setTxnDescription(e.target.value)}
+                placeholder="Enter Details (e.g. Cash received)"
+                className="w-full bg-transparent text-sm font-medium text-ink-700 outline-none placeholder:text-ink-300 disabled:opacity-50"
+              />
+            </div>
+            <div className="text-right text-[11px] font-medium text-ink-300">
+              {txnDescription.length}/100
+            </div>
+          </div>
+
+          {/* Pay Button — POSTs to /transactions */}
+          <Button type="submit" loading={isSubmittingTxn} loadingText="Processing...">
+            Pay
           </Button>
         </form>
       </Modal>
