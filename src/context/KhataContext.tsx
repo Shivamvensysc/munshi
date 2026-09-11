@@ -15,6 +15,7 @@ import type { ApiError } from "../lib/apiClient";
 export interface Khata {
   id: string;
   name: string;
+  description?: string | null;
 }
 
 interface KhataContextValue {
@@ -32,6 +33,11 @@ interface KhataContextValue {
   refetchKhatas: () => Promise<void>;
   /** Push a freshly created khata into the shared list and select it. */
   addKhata: (khata: Khata) => void;
+  /** Patch a khata already in the shared list (after a successful PUT /khatas/:id). */
+  updateKhata: (id: string, patch: { name?: string; description?: string | null }) => void;
+  /** Remove a khata from the shared list (after a successful DELETE /khatas/:id),
+   *  automatically re-selecting another khata if the deleted one was active. */
+  removeKhata: (id: string) => void;
 }
 
 const KhataContext = createContext<KhataContextValue | undefined>(undefined);
@@ -62,7 +68,11 @@ export function KhataProvider({ children }: { children: ReactNode }) {
       const data = await khataService.list();
 
       if (data.success && Array.isArray(data.data)) {
-        const mapped: Khata[] = data.data.map((k) => ({ id: k.khata_id, name: k.khata_name }));
+        const mapped: Khata[] = data.data.map((k) => ({
+          id: k.khata_id,
+          name: k.khata_name,
+          description: k.description,
+        }));
         setKhatasList(mapped);
         tokenStore.setKhatas(mapped);
 
@@ -100,6 +110,49 @@ export function KhataProvider({ children }: { children: ReactNode }) {
     selectKhata(khata.id, khata.name);
   }, [selectKhata]);
 
+  // Called after a successful PUT /khatas/:id — patches the shared list (and
+  // the header's/every page's view of it) without needing a full re-fetch.
+  const updateKhata = useCallback(
+    (id: string, patch: { name?: string; description?: string | null }) => {
+      setKhatasList((prev) => {
+        const updated = prev.map((k) => (k.id === id ? { ...k, ...patch } : k));
+        tokenStore.setKhatas(updated);
+        return updated;
+      });
+      if (id === selectedKhataId && patch.name) {
+        tokenStore.setDefaultKhata({ id, name: patch.name });
+      }
+    },
+    [selectedKhataId]
+  );
+
+  // Called after a successful DELETE /khatas/:id — removes it from the
+  // shared list and, if it was the active khata, falls back to whichever
+  // khata is now first in the list (or clears selection if none remain).
+  const removeKhata = useCallback(
+    (id: string) => {
+      setKhatasList((prev) => {
+        const updated = prev.filter((k) => k.id !== id);
+        tokenStore.setKhatas(updated);
+
+        if (id === selectedKhataId) {
+          if (updated.length > 0) {
+            const next = updated[0];
+            setSelectedKhataId(next.id);
+            tokenStore.setKhataId(next.id);
+            tokenStore.setDefaultKhata(next);
+          } else {
+            setSelectedKhataId(null);
+            tokenStore.setKhataId("");
+          }
+        }
+
+        return updated;
+      });
+    },
+    [selectedKhataId]
+  );
+
   const selectedKhata = useMemo(
     () => khatasList.find((k) => k.id === selectedKhataId) || null,
     [khatasList, selectedKhataId]
@@ -114,8 +167,20 @@ export function KhataProvider({ children }: { children: ReactNode }) {
       selectKhata,
       refetchKhatas: fetchKhatas,
       addKhata,
+      updateKhata,
+      removeKhata,
     }),
-    [khatasList, isLoadingKhatas, selectedKhataId, selectedKhata, selectKhata, fetchKhatas, addKhata]
+    [
+      khatasList,
+      isLoadingKhatas,
+      selectedKhataId,
+      selectedKhata,
+      selectKhata,
+      fetchKhatas,
+      addKhata,
+      updateKhata,
+      removeKhata,
+    ]
   );
 
   return <KhataContext.Provider value={value}>{children}</KhataContext.Provider>;

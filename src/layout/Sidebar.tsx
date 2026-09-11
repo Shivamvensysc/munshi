@@ -124,8 +124,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Footer promo card + Logout */}
         <div className="relative z-10 p-4">
-         
-         
+          
+          
 
           {/* Logout */}
           <button

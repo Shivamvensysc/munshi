@@ -39,6 +39,16 @@ interface KhataStatsResponse {
   data: KhataStats;
 }
 
+export interface UpdateKhataInput {
+  khata_name: string;
+  description: string;
+}
+
+interface DeleteKhataResponse {
+  success: boolean;
+  message?: string;
+}
+
 export const khataService = {
   /** GET /khatas */
   list() {
@@ -48,6 +58,16 @@ export const khataService = {
   /** POST /khatas */
   create(khataName: string) {
     return apiClient.post<KhataResponse>("/khatas", { khata_name: khataName });
+  },
+
+  /** PUT /khatas/:khataId */
+  update(khataId: string, input: UpdateKhataInput) {
+    return apiClient.put<KhataResponse>(`/khatas/${khataId}`, input);
+  },
+
+  /** DELETE /khatas/:khataId */
+  remove(khataId: string) {
+    return apiClient.delete<DeleteKhataResponse>(`/khatas/${khataId}`);
   },
 
   /** GET /khatas/:khataId/stats */
