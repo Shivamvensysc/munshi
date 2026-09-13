@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BookOpen, ShieldCheck, KeyRound, ArrowRight } from "lucide-react";
+import {  ShieldCheck, KeyRound, ArrowRight } from "lucide-react";
 import PhoneField from "../components/PhoneField";
 import Button from "../components/Button";
 
