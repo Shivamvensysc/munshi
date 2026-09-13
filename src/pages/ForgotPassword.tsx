@@ -95,9 +95,13 @@ export default function ForgotPassword() {
         {/* Top Navigation Link */}
         <div className="flex items-center justify-between lg:justify-end">
           <div className="flex items-center gap-2.5 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ledger-ink text-ledger-gold">
-              <BookOpen size={18} />
-            </div>
+             <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-ledger-brass-light/30 bg-ledger-brass-light/15 shadow-lg overflow-hidden">
+  <img
+    src="/image.png"
+    alt="Online Khata Logo"
+    className="h-8 w-8 object-contain"
+  />
+</div>
             <span className="font-serif text-xl font-semibold tracking-tight text-ledger-ink">
               <span className="text-ledger-brass-dark">Online Khata</span>
             </span>
