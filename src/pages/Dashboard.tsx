@@ -33,7 +33,12 @@ interface Customer {
   rawBalance: number;
 }
 
-type FilterOption = "ALL" | "NAME_AZ" | "NAME_ZA" | "BAL_HIGH_LOW" | "BAL_LOW_HIGH";
+type FilterOption =
+  | "ALL"
+  | "NAME_AZ"
+  | "NAME_ZA"
+  | "BAL_HIGH_LOW"
+  | "BAL_LOW_HIGH";
 
 function initials(name: string) {
   return name
@@ -47,7 +52,7 @@ function initials(name: string) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedKhataId } = useKhata();
+  const { selectedKhataId, isLoadingKhatas } = useKhata();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,7 +98,10 @@ export default function Dashboard() {
   // Close filter dropdown on clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+      if (
+        filterRef.current &&
+        !filterRef.current.contains(event.target as Node)
+      ) {
         setIsFilterOpen(false);
       }
     };
@@ -140,8 +148,14 @@ export default function Dashboard() {
   // GET API: Fetch customer list & stats in parallel
   const fetchDashboardData = async () => {
     if (!selectedKhataId) {
-      toast.error("No Khata selected. Please select a Khata first.");
-      setIsFetching(false);
+      // The khata list is still loading on first mount (its own fetch is
+      // in flight) — selectedKhataId is briefly null before that resolves.
+      // Only surface the "no khata" error once we know for sure there
+      // really isn't one, instead of flashing it on every page load.
+      if (!isLoadingKhatas) {
+        toast.error("No Khata selected. Please select a Khata first.");
+        setIsFetching(false);
+      }
       return;
     }
 
@@ -182,12 +196,16 @@ export default function Dashboard() {
     fetchDashboardData();
     // Re-run whenever the active khata changes (header dropdown) so the
     // dashboard refreshes immediately instead of waiting for a route change.
+    // Also re-run once khata loading finishes, so a genuinely-empty
+    // selection (no khatas at all) still surfaces the error message above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedKhataId]);
+  }, [selectedKhataId, isLoadingKhatas]);
 
   // Filter and Sort Customers
   const filteredCustomers = customers
-    .filter((customer) => customer.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((customer) =>
+      customer.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    )
     .sort((a, b) => {
       switch (selectedFilter) {
         case "NAME_AZ":
@@ -316,205 +334,218 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="w-full font-sans text-ink-900">
-      {/* PAGE HEADING */}
-      <div className="mb-5 flex flex-col gap-1 sm:mb-6">
-        <h1 className="text-xl font-extrabold tracking-tight text-ink-900 sm:text-2xl">
-          Dashboard
-        </h1>
-        <p className="text-xs font-medium text-ink-500 sm:text-sm">
-          A quick overview of your ledger and customer balances.
-        </p>
-      </div>
+    <div className="w-full min-h-full bg-ledger-bg font-sans text-ledger-ink">
+      <div className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-6 sm:py-6">
+        {/* PAGE HEADING */}
+        <div className="mb-5 flex flex-col gap-1 sm:mb-6">
+          <h1 className="font-serif text-xl font-semibold tracking-tight text-ledger-ink sm:text-2xl">
+            Dashboard
+          </h1>
+          <p className="text-xs font-medium text-ledger-subtle sm:text-sm">
+            A quick overview of your ledger and customer balances.
+          </p>
+        </div>
 
-      {/* STAT CARDS */}
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        {/* Net Balance */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-600 to-violet-700 p-5 text-white shadow-lift">
-          <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative z-10 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
-              Net Balance
-            </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-              <Wallet size={17} />
+        {/* STAT CARDS */}
+        <div className="mb-6 grid w-full grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+          {/* Net Balance */}
+          <div className="relative w-full overflow-hidden rounded-2xl border border-ledger-ink-dark bg-ledger-ink p-5 text-white shadow-sm">
+            <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-ledger-brass-light/10 blur-2xl" />
+            <div className="relative z-10 flex items-center justify-between">
+              <span className="text-[13px] font-semibold text-white/70">
+                Net balance
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ledger-brass-light/20 text-ledger-gold">
+                <Wallet size={17} />
+              </div>
+            </div>
+            <div className="relative z-10 mt-3 font-serif text-2xl font-semibold tabular-nums sm:text-3xl">
+              ₹ {netBalance.toLocaleString("en-IN")}
+            </div>
+            <div className="relative z-10 mt-1 text-[11px] font-medium text-white/60">
+              Across all khatas &amp; customers
             </div>
           </div>
-          <div className="relative z-10 mt-3 text-2xl font-black tracking-tight sm:text-3xl">
-            ₹ {netBalance.toLocaleString("en-IN")}
-          </div>
-          <div className="relative z-10 mt-1 text-[11px] font-medium text-white/70">
-            Across all khatas &amp; customers
-          </div>
-        </div>
 
-        {/* You'll Give */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-              Dene (You'll Give)
-            </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-debit-500/10 text-debit-600">
-              <TrendingDown size={17} />
+          {/* You'll Give */}
+          <div className="w-full rounded-2xl border border-ledger-border bg-ledger-paper p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] font-semibold text-ledger-muted">
+                Dene (You'll Give)
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ledger-red/10 text-ledger-red">
+                <TrendingDown size={17} />
+              </div>
+            </div>
+            <div className="mt-3 font-serif text-2xl font-semibold tabular-nums text-ledger-red sm:text-3xl">
+              ₹ {totalDene.toLocaleString("en-IN")}
+            </div>
+            <div className="mt-1 text-[11px] font-medium text-ledger-faint">
+              Owed to your customers
             </div>
           </div>
-          <div className="mt-3 text-2xl font-extrabold tracking-tight text-debit-600 sm:text-3xl">
-            ₹ {totalDene.toLocaleString("en-IN")}
-          </div>
-          <div className="mt-1 text-[11px] font-medium text-ink-500">Owed to your customers</div>
-        </div>
 
-        {/* You'll Get */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-              Lene (You'll Get)
-            </span>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-credit-500/10 text-credit-600">
-              <TrendingUp size={17} />
+          {/* You'll Get */}
+          <div className="w-full rounded-2xl border border-ledger-border bg-ledger-paper p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] font-semibold text-ledger-muted">
+                Lene (You'll Get)
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ledger-green/10 text-ledger-green">
+                <TrendingUp size={17} />
+              </div>
+            </div>
+            <div className="mt-3 font-serif text-2xl font-semibold tabular-nums text-ledger-green sm:text-3xl">
+              ₹ {totalLene.toLocaleString("en-IN")}
+            </div>
+            <div className="mt-1 text-[11px] font-medium text-ledger-faint">
+              Owed by your customers
             </div>
           </div>
-          <div className="mt-3 text-2xl font-extrabold tracking-tight text-credit-600 sm:text-3xl">
-            ₹ {totalLene.toLocaleString("en-IN")}
+        </div>
+
+        {/* SEARCH AND ACTION BAR */}
+        <div className="mb-4 flex w-full items-center gap-2 sm:gap-3">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              size={18}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ledger-placeholder"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search customer"
+              className="w-full rounded-xl border border-ledger-border bg-ledger-paper py-2.5 pl-10 pr-4 text-sm font-medium text-ledger-ink shadow-sm outline-none transition-all placeholder:text-ledger-placeholder focus:border-ledger-brass focus:ring-2 focus:ring-ledger-brass/15"
+            />
           </div>
-          <div className="mt-1 text-[11px] font-medium text-ink-500">Owed by your customers</div>
-        </div>
-      </div>
 
-      {/* SEARCH AND ACTION BAR */}
-      <div className="mb-4 flex items-center gap-2 sm:gap-3">
-        <div className="relative flex-1">
-          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-300" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search customer"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-ink-900 shadow-sm outline-none transition-all focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15"
-          />
-        </div>
+          {/* Filter Button & Popup Dropdown Menu */}
+          <div className="relative shrink-0" ref={filterRef}>
+            <button
+              type="button"
+              aria-label="Filter"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95 ${
+                isFilterOpen || selectedFilter !== "ALL"
+                  ? "border-ledger-brass bg-ledger-brass/10 text-ledger-brass-dark"
+                  : "border-ledger-border bg-ledger-paper text-ledger-muted hover:bg-ledger-hover"
+              }`}
+            >
+              <Filter size={18} />
+            </button>
 
-        {/* Filter Button & Popup Dropdown Menu */}
-        <div className="relative" ref={filterRef}>
+            {isFilterOpen && (
+              <div className="absolute right-0 top-12 z-30 w-52 overflow-hidden rounded-2xl border border-ledger-border bg-ledger-paper py-2 shadow-xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100">
+                {(
+                  [
+                    ["ALL", "All"],
+                    ["NAME_AZ", "Name: A to Z"],
+                    ["NAME_ZA", "Name: Z to A"],
+                    ["BAL_HIGH_LOW", "Balance: High to Low"],
+                    ["BAL_LOW_HIGH", "Balance: Low to High"],
+                  ] as [FilterOption, string][]
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setSelectedFilter(value);
+                      setIsFilterOpen(false);
+                    }}
+                    className={`flex w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                      selectedFilter === value
+                        ? "bg-ledger-hover font-semibold text-ledger-ink"
+                        : "font-medium text-ledger-muted hover:bg-ledger-hover hover:text-ledger-ink"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
-            aria-label="Filter"
-            onClick={() => setIsFilterOpen((prev) => !prev)}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-all active:scale-95 ${
-              isFilterOpen || selectedFilter !== "ALL"
-                ? "border-brand-600 bg-brand-50 text-brand-700"
-                : "border-slate-200 bg-white text-brand-800 hover:bg-brand-50"
-            }`}
+            aria-label="Download Report"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-ledger-border bg-ledger-paper text-ledger-muted shadow-sm transition-all hover:bg-ledger-hover active:scale-95"
           >
-            <Filter size={18} />
+            <FileText size={18} />
           </button>
 
-          {isFilterOpen && (
-            <div className="absolute right-0 top-12 z-30 w-52 overflow-hidden rounded-2xl border border-slate-100 bg-white py-2 shadow-xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100">
-              {(
-                [
-                  ["ALL", "All"],
-                  ["NAME_AZ", "Name: A to Z"],
-                  ["NAME_ZA", "Name: Z to A"],
-                  ["BAL_HIGH_LOW", "Balance: High to Low"],
-                  ["BAL_LOW_HIGH", "Balance: Low to High"],
-                ] as [FilterOption, string][]
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    setSelectedFilter(value);
-                    setIsFilterOpen(false);
-                  }}
-                  className={`flex w-full px-4 py-2.5 text-left text-sm transition-colors ${
-                    selectedFilter === value
-                      ? "bg-slate-50 font-bold text-ink-900"
-                      : "font-medium text-ink-600 hover:bg-slate-50 hover:text-ink-900"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="hidden shrink-0 items-center gap-1.5 rounded-xl bg-ledger-brass px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-ledger-brass-dark active:scale-95 sm:flex"
+          >
+            <Plus size={17} className="stroke-[2.5]" />
+            <span>Add Customer</span>
+          </button>
         </div>
 
-        <button
-          type="button"
-          aria-label="Download Report"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-brand-800 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
-        >
-          <FileText size={18} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setIsAddModalOpen(true)}
-          className="hidden shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-700 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-violet-600/25 transition-all hover:from-violet-600 hover:to-violet-500 active:scale-95 sm:flex"
-        >
-          <Plus size={17} className="stroke-[2.5]" />
-          <span>Add Customer</span>
-        </button>
-      </div>
-
-      {/* CUSTOMER LIST SECTION */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-card">
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3.5 sm:px-5">
-          <div className="flex items-center gap-2">
-            <Users size={16} className="text-brand-600" />
-            <h2 className="text-sm font-bold text-ink-900 sm:text-base">Customers</h2>
+        {/* CUSTOMER LIST SECTION */}
+        <div className="w-full rounded-2xl border border-ledger-border bg-ledger-paper shadow-sm">
+          <div className="flex items-center justify-between border-b border-ledger-border-soft px-4 py-3.5 sm:px-5">
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-ledger-brass-dark" />
+              <h2 className="text-sm font-semibold text-ledger-ink sm:text-base">
+                Customers
+              </h2>
+            </div>
+            <span className="text-xs font-semibold text-ledger-faint">
+              {filteredCustomers.length} total
+            </span>
           </div>
-          <span className="text-xs font-semibold text-ink-500">
-            {filteredCustomers.length} total
-          </span>
-        </div>
 
-        <div className="divide-y divide-slate-100">
-          {isFetching ? (
-            <div className="flex items-center justify-center py-10 text-slate-400 gap-2 text-sm">
-              <Spinner size={18} className="text-brand-600" />
-              <span>Loading customers...</span>
-            </div>
-          ) : filteredCustomers.length > 0 ? (
-            filteredCustomers.map((customer) => (
-              <button
-                key={customer.id}
-                type="button"
-                onClick={() => handleCustomerClick(customer.id)}
-                className="group flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-brand-50/40 sm:px-5"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1 ${
-                      customer.type === "get"
-                        ? "bg-credit-500/10 text-credit-600 ring-credit-500/20"
-                        : "bg-debit-500/10 text-debit-600 ring-debit-500/20"
-                    }`}
-                  >
-                    {initials(customer.name)}
+          <div className="divide-y divide-ledger-border-soft">
+            {isFetching ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-ledger-faint">
+                <Spinner size={18} className="text-ledger-brass-dark" />
+                <span>Loading customers...</span>
+              </div>
+            ) : filteredCustomers.length > 0 ? (
+              filteredCustomers.map((customer) => (
+                <button
+                  key={customer.id}
+                  type="button"
+                  onClick={() => handleCustomerClick(customer.id)}
+                  className="group flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-ledger-hover/70 sm:px-5"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1 ${
+                        customer.type === "get"
+                          ? "bg-ledger-green/10 text-ledger-green ring-ledger-green/20"
+                          : "bg-ledger-red/10 text-ledger-red ring-ledger-red/20"
+                      }`}
+                    >
+                      {initials(customer.name)}
+                    </div>
+                    <span className="truncate text-sm font-semibold text-ledger-ink transition-colors group-hover:text-ledger-brass-dark sm:text-base">
+                      {customer.name}
+                    </span>
                   </div>
-                  <span className="truncate text-sm font-bold text-ink-900 transition-colors group-hover:text-brand-700 sm:text-base">
-                    {customer.name}
-                  </span>
-                </div>
 
-                <div className="flex shrink-0 items-center gap-2">
-                  <span
-                    className={`text-sm font-extrabold sm:text-base ${
-                      customer.type === "get" ? "text-credit-600" : "text-debit-600"
-                    }`}
-                  >
-                    ₹ {customer.amount}
-                  </span>
-                </div>
-              </button>
-            ))
-          ) : (
-            <div className="p-8 text-center text-sm font-medium text-ink-500">
-              No customers found matching "{searchQuery}"
-            </div>
-          )}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span
+                      className={`font-serif text-sm font-semibold tabular-nums sm:text-base ${
+                        customer.type === "get"
+                          ? "text-ledger-green"
+                          : "text-ledger-red"
+                      }`}
+                    >
+                      ₹ {customer.amount}
+                    </span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="p-8 text-center text-sm font-medium text-ledger-faint">
+                No customers found matching "{searchQuery}"
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -523,7 +554,7 @@ export default function Dashboard() {
         type="button"
         onClick={() => setIsAddModalOpen(true)}
         aria-label="Add Customer"
-        className="fixed bottom-5 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-700 to-violet-600 text-white shadow-lift transition-all active:scale-95 sm:hidden"
+        className="fixed bottom-5 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-ledger-brass text-white shadow-lg transition-all hover:bg-ledger-brass-dark active:scale-95 sm:hidden"
       >
         <Plus size={24} className="stroke-[2.5]" />
       </button>
@@ -535,7 +566,7 @@ export default function Dashboard() {
         type="button"
         onClick={() => setIsAddTxnModalOpen(true)}
         aria-label="Add Transaction"
-        className="fixed bottom-24 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-600 to-blue-600 text-white shadow-lift transition-all active:scale-95 sm:right-6"
+        className="fixed bottom-24 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-ledger-ink text-white shadow-lg transition-all hover:bg-ledger-ink-dark active:scale-95 sm:right-6"
       >
         <Plus size={24} className="stroke-[2.5]" />
       </button>
@@ -547,10 +578,13 @@ export default function Dashboard() {
         title="New Customer"
         preventClose={isSubmitting}
       >
-        <form onSubmit={handleAddCustomerSubmit} className="flex flex-col gap-4 p-5 sm:p-6">
+        <form
+          onSubmit={handleAddCustomerSubmit}
+          className="flex flex-col gap-4 p-5 sm:p-6"
+        >
           {/* Customer Name Input */}
           <div className="space-y-1">
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="text"
                 maxLength={36}
@@ -559,19 +593,21 @@ export default function Dashboard() {
                 value={newCustomerName}
                 onChange={(e) => setNewCustomerName(e.target.value)}
                 placeholder="Customer Name"
-                className="w-full bg-transparent text-sm font-medium text-ink-900 outline-none placeholder:text-ink-300 disabled:opacity-50"
+                className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400 disabled:opacity-50"
               />
             </div>
-            <div className="text-right text-[11px] text-ink-300">{newCustomerName.length}/36</div>
+            <div className="text-right text-[11px] text-slate-400">
+              {newCustomerName.length}/36
+            </div>
           </div>
 
           {/* Contact No Input with Country Code */}
           <div>
-            <div className="flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
-              <div className="mr-3 flex shrink-0 items-center gap-1.5 whitespace-nowrap border-r border-slate-200 pr-3 text-xs font-bold text-ink-700">
+            <div className="flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
+              <div className="mr-3 flex shrink-0 items-center gap-1.5 whitespace-nowrap border-r border-slate-200 pr-3 text-xs font-bold text-slate-700">
                 <span className="text-base leading-none">🇮🇳</span>
                 <span>+91</span>
-                <span className="text-[10px] text-ink-300">▼</span>
+                <span className="text-[10px] text-slate-400">▼</span>
               </div>
               <input
                 type="tel"
@@ -579,14 +615,14 @@ export default function Dashboard() {
                 value={newContactNo}
                 onChange={(e) => setNewContactNo(e.target.value)}
                 placeholder="Contact No"
-                className="w-full bg-transparent text-sm font-medium text-ink-900 outline-none placeholder:text-ink-300 disabled:opacity-50"
+                className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400 disabled:opacity-50"
               />
             </div>
           </div>
 
           {/* Address Input */}
           <div className="space-y-1">
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="text"
                 maxLength={36}
@@ -594,14 +630,20 @@ export default function Dashboard() {
                 value={newAddress}
                 onChange={(e) => setNewAddress(e.target.value)}
                 placeholder="Address"
-                className="w-full bg-transparent text-sm font-medium text-ink-900 outline-none placeholder:text-ink-300 disabled:opacity-50"
+                className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400 disabled:opacity-50"
               />
             </div>
-            <div className="text-right text-[11px] text-ink-300">{newAddress.length}/36</div>
+            <div className="text-right text-[11px] text-slate-400">
+              {newAddress.length}/36
+            </div>
           </div>
 
           {/* Continue Submit Button */}
-          <Button type="submit" loading={isSubmitting} loadingText="Adding Customer...">
+          <Button
+            type="submit"
+            loading={isSubmitting}
+            loadingText="Adding Customer..."
+          >
             Continue
           </Button>
         </form>
@@ -618,17 +660,22 @@ export default function Dashboard() {
         title="Add Single"
         preventClose={isSubmittingTxn}
       >
-        <form onSubmit={handleAddTransactionSubmit} className="flex flex-col gap-4 p-5 sm:p-6">
+        <form
+          onSubmit={handleAddTransactionSubmit}
+          className="flex flex-col gap-4 p-5 sm:p-6"
+        >
           {/* Customer Dropdown */}
           <div className="space-y-1.5">
-            <label className="block text-sm font-bold text-ink-700">Customer</label>
-            <div className="relative rounded-xl border border-slate-200 bg-white shadow-2xs transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+            <label className="block text-sm font-semibold text-slate-700">
+              Customer
+            </label>
+            <div className="relative rounded-xl border border-slate-200 bg-white shadow-2xs transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <select
                 required
                 disabled={isSubmittingTxn || isFetching}
                 value={txnCustomerId}
                 onChange={(e) => setTxnCustomerId(e.target.value)}
-                className="w-full cursor-pointer appearance-none rounded-xl bg-transparent px-3.5 py-3 text-sm font-medium text-ink-700 outline-none disabled:opacity-50"
+                className="w-full cursor-pointer appearance-none rounded-xl bg-transparent px-3.5 py-3 text-sm font-medium text-slate-700 outline-none disabled:opacity-50"
               >
                 <option value="" disabled>
                   {isFetching ? "Loading customers..." : "Select Customer"}
@@ -639,22 +686,30 @@ export default function Dashboard() {
                   </option>
                 ))}
               </select>
-              <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-ink-300">
-                {isFetching ? <Loader2 size={14} className="animate-spin" /> : "▼"}
+              <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                {isFetching ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  "▼"
+                )}
               </div>
             </div>
           </div>
 
           {/* Transaction Type Dropdown (LENE / DENE) */}
           <div className="space-y-1.5">
-            <label className="block text-sm font-bold text-ink-700">Type</label>
-            <div className="relative rounded-xl border border-slate-200 bg-white shadow-2xs transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+            <label className="block text-sm font-semibold text-slate-700">
+              Type
+            </label>
+            <div className="relative rounded-xl border border-slate-200 bg-white shadow-2xs transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <select
                 required
                 disabled={isSubmittingTxn}
                 value={txnType}
-                onChange={(e) => setTxnType(e.target.value as "" | "LENE" | "DENE")}
-                className="w-full cursor-pointer appearance-none rounded-xl bg-transparent px-3.5 py-3 text-sm font-medium text-ink-700 outline-none disabled:opacity-50"
+                onChange={(e) =>
+                  setTxnType(e.target.value as "" | "LENE" | "DENE")
+                }
+                className="w-full cursor-pointer appearance-none rounded-xl bg-transparent px-3.5 py-3 text-sm font-medium text-slate-700 outline-none disabled:opacity-50"
               >
                 <option value="" disabled>
                   Select Type
@@ -662,7 +717,7 @@ export default function Dashboard() {
                 <option value="LENE">LENE (You&apos;ll Get)</option>
                 <option value="DENE">DENE (You&apos;ll Give)</option>
               </select>
-              <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-ink-300">
+              <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">
                 ▼
               </div>
             </div>
@@ -670,9 +725,11 @@ export default function Dashboard() {
 
           {/* Amount Input */}
           <div className="space-y-1">
-            <label className="block text-sm font-bold text-ink-700">Amount</label>
-            <div className="relative flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-2xs transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
-              <IndianRupee size={15} className="mr-2 shrink-0 text-ink-300" />
+            <label className="block text-sm font-semibold text-slate-700">
+              Amount
+            </label>
+            <div className="relative flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-2xs transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
+              <IndianRupee size={15} className="mr-2 shrink-0 text-slate-400" />
               <input
                 type="number"
                 step="any"
@@ -685,18 +742,20 @@ export default function Dashboard() {
                   }
                 }}
                 placeholder="Enter Amount"
-                className="w-full bg-transparent text-sm font-bold text-ink-700 outline-none placeholder:font-bold placeholder:text-ink-300 disabled:opacity-50"
+                className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none placeholder:font-bold placeholder:text-slate-400 disabled:opacity-50"
               />
             </div>
-            <div className="text-right text-[11px] font-medium text-ink-300">
+            <div className="text-right text-[11px] font-medium text-slate-400">
               {txnAmount.length}/9
             </div>
           </div>
 
           {/* Details Input */}
           <div className="space-y-1">
-            <label className="block text-sm font-bold text-ink-700">Details</label>
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-2xs transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+            <label className="block text-sm font-semibold text-slate-700">
+              Details
+            </label>
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-2xs transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="text"
                 maxLength={100}
@@ -704,16 +763,20 @@ export default function Dashboard() {
                 value={txnDescription}
                 onChange={(e) => setTxnDescription(e.target.value)}
                 placeholder="Enter Details (e.g. Cash received)"
-                className="w-full bg-transparent text-sm font-medium text-ink-700 outline-none placeholder:text-ink-300 disabled:opacity-50"
+                className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400 disabled:opacity-50"
               />
             </div>
-            <div className="text-right text-[11px] font-medium text-ink-300">
+            <div className="text-right text-[11px] font-medium text-slate-400">
               {txnDescription.length}/100
             </div>
           </div>
 
           {/* Pay Button — POSTs to /transactions */}
-          <Button type="submit" loading={isSubmittingTxn} loadingText="Processing...">
+          <Button
+            type="submit"
+            loading={isSubmittingTxn}
+            loadingText="Processing..."
+          >
             Pay
           </Button>
         </form>

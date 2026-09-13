@@ -7,6 +7,8 @@ import {
   Trash2,
   AlertCircle,
   Check,
+  History,
+  Landmark,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import jsPDF from "jspdf";
@@ -67,11 +69,16 @@ export default function CustomerDetail() {
   const [confirmMap, setConfirmMap] = useState<Record<string, "Y" | "N">>({});
   const getConfirmStatus = (id: string): "Y" | "N" => confirmMap[id] ?? "N";
   const toggleConfirmStatus = (id: string) => {
-    setConfirmMap((prev) => ({ ...prev, [id]: getConfirmStatus(id) === "Y" ? "N" : "Y" }));
+    setConfirmMap((prev) => ({
+      ...prev,
+      [id]: getConfirmStatus(id) === "Y" ? "N" : "Y",
+    }));
   };
 
   // Transaction currently targeted by the Edit/Delete modals
-  const [activeTransaction, setActiveTransaction] = useState<Entry | null>(null);
+  const [activeTransaction, setActiveTransaction] = useState<Entry | null>(
+    null,
+  );
 
   // Edit Transaction Form State
   const [editAmount, setEditAmount] = useState<string>("");
@@ -127,7 +134,8 @@ export default function CustomerDetail() {
   const mapTransactionToEntry = (tx: TransactionApiData): Entry => {
     const numAmount = parseFloat(String(tx.amount || "0"));
     const numBalance = parseFloat(String(tx.running_balance || "0"));
-    const rawDateSource = tx.transaction_date || tx.created_at || new Date().toISOString();
+    const rawDateSource =
+      tx.transaction_date || tx.created_at || new Date().toISOString();
     const parsedDate = new Date(rawDateSource);
     const rawTransactionDate = isNaN(parsedDate.getTime())
       ? new Date().toISOString().slice(0, 10)
@@ -135,8 +143,12 @@ export default function CustomerDetail() {
 
     return {
       id: tx.transaction_id,
-      title: tx.description || (tx.transaction_type === "LENE" ? "Lene Entry" : "Dene Entry"),
-      date: formatDateString(tx.created_at || tx.transaction_date || new Date().toISOString()),
+      title:
+        tx.description ||
+        (tx.transaction_type === "LENE" ? "Lene Entry" : "Dene Entry"),
+      date: formatDateString(
+        tx.created_at || tx.transaction_date || new Date().toISOString(),
+      ),
       balance: numBalance.toLocaleString("en-IN"),
       ...(tx.transaction_type === "LENE"
         ? { leneAmount: numAmount.toLocaleString("en-IN") }
@@ -191,9 +203,12 @@ export default function CustomerDetail() {
               ? ({
                   ...prev,
                   ...(transactionsData.customer as Partial<CustomerApiData>),
-                  address: prev.address || (transactionsData.customer?.address as string) || "",
+                  address:
+                    prev.address ||
+                    (transactionsData.customer?.address as string) ||
+                    "",
                 } as CustomerApiData)
-              : prev
+              : prev,
           );
         }
 
@@ -324,35 +339,62 @@ export default function CustomerDetail() {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(30, 41, 59);
-    doc.text(`Customer: ${report.customer.customer_name}`, pageWidth - margin, 48, {
-      align: "right",
-    });
+    doc.text(
+      `Customer: ${report.customer.customer_name}`,
+      pageWidth - margin,
+      48,
+      {
+        align: "right",
+      },
+    );
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
-    doc.text(`Mobile: ${report.customer.mobile_number || "N/A"}`, pageWidth - margin, 64, {
-      align: "right",
-    });
+    doc.text(
+      `Mobile: ${report.customer.mobile_number || "N/A"}`,
+      pageWidth - margin,
+      64,
+      {
+        align: "right",
+      },
+    );
     if (report.customer.address) {
-      doc.text(`Address: ${report.customer.address}`, pageWidth - margin, 78, { align: "right" });
+      doc.text(`Address: ${report.customer.address}`, pageWidth - margin, 78, {
+        align: "right",
+      });
     }
 
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(1);
     doc.line(margin, 90, pageWidth - margin, 90);
 
-    const formattedOpening = Number(report.summary.opening_balance || 0).toLocaleString("en-IN");
-    const formattedLene = Number(report.summary.total_received_lene || 0).toLocaleString("en-IN");
-    const formattedDene = Number(report.summary.total_given_dene || 0).toLocaleString("en-IN");
-    const formattedNet = Number(report.summary.closing_balance || 0).toLocaleString("en-IN");
+    const formattedOpening = Number(
+      report.summary.opening_balance || 0,
+    ).toLocaleString("en-IN");
+    const formattedLene = Number(
+      report.summary.total_received_lene || 0,
+    ).toLocaleString("en-IN");
+    const formattedDene = Number(
+      report.summary.total_given_dene || 0,
+    ).toLocaleString("en-IN");
+    const formattedNet = Number(
+      report.summary.closing_balance || 0,
+    ).toLocaleString("en-IN");
 
     autoTable(doc, {
       startY: 100,
       margin: { left: margin, right: margin },
-      head: [["Opening Balance", "Total Lene (-)", "Total Dene (+)", "Net Balance"]],
+      head: [
+        ["Opening Balance", "Total Lene (-)", "Total Dene (+)", "Net Balance"],
+      ],
       body: [
-        [`Rs. ${formattedOpening}`, `Rs. ${formattedLene}`, `Rs. ${formattedDene}`, `Rs. ${formattedNet}`],
+        [
+          `Rs. ${formattedOpening}`,
+          `Rs. ${formattedLene}`,
+          `Rs. ${formattedDene}`,
+          `Rs. ${formattedNet}`,
+        ],
         [
           "",
           "",
@@ -389,13 +431,21 @@ export default function CustomerDetail() {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.setTextColor(71, 85, 105);
-    doc.text(`No. of Entries: ${report.transactions?.length || 0}`, margin, summaryEndY);
+    doc.text(
+      `No. of Entries: ${report.transactions?.length || 0}`,
+      margin,
+      summaryEndY,
+    );
 
     const tableRows = (report.transactions || []).map((t) => [
       formatPdfDate(t.date),
       t.description || (t.type === "LENE" ? "Lene Entry" : "Dene Entry"),
-      t.type === "LENE" ? `Rs. ${Number(t.amount).toLocaleString("en-IN")}` : "-",
-      t.type === "DENE" ? `Rs. ${Number(t.amount).toLocaleString("en-IN")}` : "-",
+      t.type === "LENE"
+        ? `Rs. ${Number(t.amount).toLocaleString("en-IN")}`
+        : "-",
+      t.type === "DENE"
+        ? `Rs. ${Number(t.amount).toLocaleString("en-IN")}`
+        : "-",
       `Rs. ${Number(t.balance).toLocaleString("en-IN")}`,
     ]);
 
@@ -406,7 +456,9 @@ export default function CustomerDetail() {
       body: [
         [
           formatPdfDate(
-            report.period.start_date !== "Beginning" ? report.period.start_date : new Date().toISOString()
+            report.period.start_date !== "Beginning"
+              ? report.period.start_date
+              : new Date().toISOString(),
           ),
           "Opening balance",
           "-",
@@ -415,7 +467,15 @@ export default function CustomerDetail() {
         ],
         ...tableRows,
       ],
-      foot: [["Grand Total", "", `Rs. ${formattedLene}`, `Rs. ${formattedDene}`, `Rs. ${formattedNet}`]],
+      foot: [
+        [
+          "Grand Total",
+          "",
+          `Rs. ${formattedLene}`,
+          `Rs. ${formattedDene}`,
+          `Rs. ${formattedNet}`,
+        ],
+      ],
       theme: "striped",
       headStyles: {
         fillColor: [79, 70, 229],
@@ -450,22 +510,36 @@ export default function CustomerDetail() {
         doc.setTextColor(148, 163, 184);
 
         const now = new Date();
-        const formattedTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const formattedTime = now.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
         const formattedReportDate = now.toLocaleDateString("en-IN", {
           day: "2-digit",
           month: "short",
           year: "2-digit",
         });
 
-        doc.text(`Report Generated: ${formattedTime} | ${formattedReportDate}`, margin, pageHeight - 20);
+        doc.text(
+          `Report Generated: ${formattedTime} | ${formattedReportDate}`,
+          margin,
+          pageHeight - 20,
+        );
 
-        doc.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth - margin, pageHeight - 20, {
-          align: "right",
-        });
+        doc.text(
+          `Page ${data.pageNumber} of ${pageCount}`,
+          pageWidth - margin,
+          pageHeight - 20,
+          {
+            align: "right",
+          },
+        );
       },
     });
 
-    const safeCustomerName = (report.customer.customer_name || "Customer").replace(/\s+/g, "_");
+    const safeCustomerName = (
+      report.customer.customer_name || "Customer"
+    ).replace(/\s+/g, "_");
     doc.save(`${safeCustomerName}_statement_${Date.now()}.pdf`);
   };
 
@@ -521,12 +595,15 @@ export default function CustomerDetail() {
         khata_customer_id: khataCustomerId,
         amount: parsedAmount,
         transaction_type: activeModal,
-        description: detailsInput.trim() || (activeModal === "LENE" ? "Amount Diya" : "Amount Liya"),
+        description:
+          detailsInput.trim() ||
+          (activeModal === "LENE" ? "Amount Diya" : "Amount Liya"),
       });
 
       if (data.success) {
         toast.success(
-          data.message || `${activeModal === "LENE" ? "Lene" : "Dene"} transaction added successfully!`
+          data.message ||
+            `${activeModal === "LENE" ? "Lene" : "Dene"} transaction added successfully!`,
         );
         handleModalClose();
         fetchCustomerAndTransactions();
@@ -629,203 +706,294 @@ export default function CustomerDetail() {
     }
   };
 
-  const netBalNum = customer ? parseFloat(String(customer.net_balance || "0")) : 0;
+  const netBalNum = customer
+    ? parseFloat(String(customer.net_balance || "0"))
+    : 0;
   const formattedNetBalance = Math.abs(netBalNum).toLocaleString("en-IN");
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-slate-50/50">
-      {/* 1. TOP NAVBAR */}
-      <header className="sticky top-0 z-10 flex h-10 w-full items-center justify-between border-b border-slate-200 bg-white px-4 shadow-xs sm:px-6">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 active:scale-95"
-          aria-label="Back"
-        >
-          <ArrowLeft size={20} />
-        </button>
+    // Fixed wrapper accounts for the top app header (~56px) and bottom navbar (~64px)
+    <div className="fixed top-[56px] bottom-[64px] left-0 right-0 z-10 flex flex-col overflow-hidden bg-ledger-bg text-ledger-ink">
+      {/* 1. TOP HEADER SECTION (Identity, Balance, Actions) */}
+      <header className="w-full shrink-0 border-b border-ledger-ink bg-ledger-paper shadow-sm">
+        {/* Identity Row: Full width */}
+        <div className="flex h-14 w-full items-center justify-between border-b border-ledger-border-soft px-4 sm:px-8">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ledger-icon transition-colors hover:bg-ledger-hover-alt active:scale-95"
+            aria-label="Back"
+          >
+            <ArrowLeft size={20} />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => handleOpenModal("EDIT_CUSTOMER")}
-          className="group flex min-w-0 items-center justify-center gap-2 truncate text-base font-bold text-slate-800 transition hover:opacity-85 sm:text-lg"
-        >
-          <Pencil size={15} className="shrink-0 text-indigo-600 transition-transform group-hover:scale-110" />
-          <span className="truncate">{customer?.customer_name || "Loading..."}</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => handleOpenModal("EDIT_CUSTOMER")}
+            className="group flex min-w-0 items-baseline justify-center gap-1.5 truncate px-2 transition hover:opacity-80"
+          >
+            <span className="truncate font-serif text-lg font-semibold text-ledger-ink sm:text-xl">
+              {customer?.customer_name || "Loading…"}
+            </span>
+            <Pencil
+              size={14}
+              className="shrink-0 translate-y-[-1px] text-ledger-brass transition-transform group-hover:scale-110"
+            />
+          </button>
 
-        <button
-          type="button"
-          disabled={isDownloadingPdf || !customer?.customer_id}
-          onClick={handleDownloadPdf}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 transition hover:bg-indigo-600 hover:text-white disabled:opacity-50"
-          aria-label="Download Statement"
-          title="Download Statement PDF"
-        >
-          {isDownloadingPdf ? <Spinner size={18} className="text-indigo-600" /> : <FileText size={18} />}
-        </button>
-      </header>
-
-      {/* 2. OPENING & CLOSING BALANCE BANNER */}
-      <section className="border-b border-slate-200 bg-white px-4 py-3 sm:px-8">
-        <div className="mx-auto flex max-w-5xl items-center justify-between py-1 text-sm font-semibold text-slate-700">
-          <span>Opening</span>
-          <span className="text-emerald-600">₹ 0</span>
+          <button
+            type="button"
+            disabled={isDownloadingPdf || !customer?.customer_id}
+            onClick={handleDownloadPdf}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ledger-border-hover bg-ledger-paper text-ledger-brass-dark transition hover:border-ledger-ink hover:bg-ledger-ink hover:text-ledger-paper-muted disabled:opacity-40"
+            aria-label="Download Statement"
+            title="Download Statement PDF"
+          >
+            {isDownloadingPdf ? (
+              <Spinner size={17} className="text-ledger-brass-dark" />
+            ) : (
+              <FileText size={17} />
+            )}
+          </button>
         </div>
 
-        <div className="mx-auto flex max-w-5xl items-center justify-between border-t border-slate-100 pt-2 text-base font-bold sm:text-lg">
-          <span className="text-slate-900">Closing</span>
+        {/* Opening Balance */}
+        <div className="flex w-full items-center justify-between border-b border-ledger-border-soft px-4 py-2 sm:px-8">
+          <span className="text-[13px] font-medium text-ledger-subtle">
+            Opening balance
+          </span>
+          <span className="font-serif text-base text-ledger-slate tabular-nums">
+            ₹ 0
+          </span>
+        </div>
+
+        {/* Closing Balance Headline */}
+        <div
+          className={`flex w-full items-center justify-between border-b border-ledger-border-soft px-4 py-2.5 sm:px-8 ${
+            netBalNum > 0
+              ? "bg-ledger-green-wash"
+              : netBalNum < 0
+                ? "bg-ledger-red-wash"
+                : "bg-ledger-paper"
+          }`}
+        >
+          <span className="text-[13px] font-semibold text-ledger-muted">
+            {netBalNum > 0
+              ? "Closing — You will get"
+              : netBalNum < 0
+                ? "Closing — You will give"
+                : "Closing balance"}
+          </span>
           <span
-            className={
-              netBalNum > 0 ? "text-emerald-600" : netBalNum < 0 ? "text-rose-600" : "text-slate-800"
-            }
+            className={`font-serif text-2xl font-semibold tabular-nums sm:text-3xl ${
+              netBalNum > 0
+                ? "text-ledger-green"
+                : netBalNum < 0
+                  ? "text-ledger-red"
+                  : "text-ledger-ink"
+            }`}
           >
             ₹ {formattedNetBalance}
           </span>
         </div>
-      </section>
 
-      {/* 3. FILTER / ACTION BANNER BAR */}
-      <section className="w-full bg-indigo-600 px-4 py-2.5 shadow-inner sm:px-8">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
+        {/* Actions Row */}
+        <div className="flex w-full items-center justify-between gap-3 border-b border-ledger-border-soft bg-ledger-ink px-4 py-2 sm:px-8">
           <button
             type="button"
             onClick={() => handleOpenModal("MONDAY_FINAL_CONFIRM")}
-            className="rounded-lg bg-white/20 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-white/30 active:scale-95 sm:text-sm"
+            className="flex items-center gap-1.5 rounded-full border border-ledger-brass-light/50 bg-ledger-brass-light/15 px-3.5 py-1.5 text-xs font-semibold text-ledger-gold transition hover:bg-ledger-brass-light/25 active:scale-95 sm:text-sm"
           >
+            <Landmark size={14} />
             Monday Final
           </button>
 
           <button
             type="button"
-            className="rounded-lg border border-white/30 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 active:scale-95 sm:text-sm"
+            className="flex items-center gap-1.5 rounded-full border border-white/15 px-3.5 py-1.5 text-xs font-semibold text-ledger-navy-text transition hover:bg-white/10 active:scale-95 sm:text-sm"
           >
+            <History size={14} />
             Last Week Record
           </button>
         </div>
-      </section>
+      </header>
 
-      {/* 4. MAIN CONTENT & ENTRIES TABLE */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-6">
-        {/* Table Column Headers */}
-        <div className="mb-2 grid grid-cols-12 items-center gap-1 rounded-lg bg-slate-100 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-600 sm:gap-2">
-          <div className="col-span-4 sm:col-span-5">Entries</div>
-          <div className="col-span-2 text-right">Lene</div>
-          <div className="col-span-2 text-right">Dene</div>
-          <div className="col-span-4 text-right sm:col-span-3">Status / Actions</div>
-        </div>
-
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-400">
-            <Spinner size={24} className="text-indigo-600" />
-            <span className="text-xs font-medium">Loading ledger transactions...</span>
-          </div>
-        ) : entries.length > 0 ? (
-          <div className="space-y-2">
-            {entries.map((item) => {
-              const status = getConfirmStatus(item.id);
-              const isConfirmed = status === "Y";
-
-              return (
-                <div
-                  key={item.id}
-                  className="grid grid-cols-12 items-center gap-1 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-2xs transition hover:border-slate-300 sm:gap-2"
-                >
-                  {/* Left Column: Details & Date */}
-                  <div className="col-span-4 min-w-0 sm:col-span-5">
-                    <div className="truncate text-sm font-semibold text-slate-900">{item.title}</div>
-                    <div className="text-xs text-slate-400">{item.date}</div>
-                    {item.subPerson && (
-                      <div className="text-xs font-semibold text-indigo-600">{item.subPerson}</div>
-                    )}
-                    <div className="text-xs font-medium text-rose-600">Bal. ₹ {item.balance}</div>
-                  </div>
-
-                  {/* Lene Amount Column */}
-                  <div className="col-span-2 text-right font-bold text-rose-600">
-                    {item.leneAmount ? `₹ ${item.leneAmount}` : <span className="text-slate-300">-</span>}
-                  </div>
-
-                  {/* Dene Amount Column */}
-                  <div className="col-span-2 text-right font-bold text-emerald-600">
-                    {item.deneAmount ? `₹ ${item.deneAmount}` : <span className="text-slate-300">-</span>}
-                  </div>
-
-                  {/* Right Column: Status Toggle & Actions */}
-                  <div className="col-span-4 flex items-center justify-end gap-1 sm:col-span-3 sm:gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleConfirmStatus(item.id)}
-                      title={isConfirmed ? "Confirmed (Locked)" : "Unconfirmed (Click to lock)"}
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition active:scale-95 sm:h-7 sm:w-7 ${
-                        isConfirmed
-                          ? "bg-emerald-600 text-white"
-                          : "border border-slate-300 bg-slate-50 text-slate-600 hover:bg-slate-100"
-                      }`}
-                    >
-                      {isConfirmed ? <Check size={13} strokeWidth={3} /> : "N"}
-                    </button>
-
-                    {!isConfirmed && (
-                      <div className="flex items-center gap-0.5 sm:gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditTransaction(item)}
-                          aria-label="Edit transaction"
-                          title="Edit transaction"
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-indigo-600 active:scale-95 sm:h-7 sm:w-7"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDeleteTransaction(item)}
-                          aria-label="Delete transaction"
-                          title="Delete transaction"
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-rose-50 hover:text-rose-600 active:scale-95 sm:h-7 sm:w-7"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+      {/* 2. FULL WIDTH SCROLLABLE TABLE AREA */}
+      <main className="scrollbar-hide relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="w-full">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-20 text-ledger-faint">
+              <Spinner size={24} className="text-ledger-brass-dark" />
+              <span className="text-xs font-medium">
+                Loading ledger transactions…
+              </span>
+            </div>
+          ) : entries.length > 0 ? (
+            <div className="w-full border-b border-ledger-border bg-ledger-paper">
+              {/* Pinned Table Columns Header */}
+              <div className="sticky top-0 z-10 grid w-full grid-cols-12 gap-2 border-b border-ledger-ink/15 bg-ledger-hover px-4 py-2.5 text-[13px] font-semibold text-ledger-muted sm:px-8">
+                <div className="col-span-7 sm:col-span-5">Entry</div>
+                <div className="col-span-2 hidden text-right sm:block">
+                  Lene
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-16 text-center text-slate-400">
-            <AlertCircle size={32} className="stroke-1 text-slate-300" />
-            <p className="mt-2 text-sm font-medium">No transactions recorded yet.</p>
-            <p className="text-xs text-slate-400">Use LENE or DENE below to add your first entry.</p>
-          </div>
-        )}
+                <div className="col-span-2 hidden text-right sm:block">
+                  Dene
+                </div>
+                <div className="col-span-5 text-right sm:col-span-3">
+                  Status
+                </div>
+              </div>
+
+              {/* Transactions List */}
+              {entries.map((item, idx) => {
+                const status = getConfirmStatus(item.id);
+                const isConfirmed = status === "Y";
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`grid w-full grid-cols-12 items-center gap-2 px-4 py-3.5 transition hover:bg-ledger-hover/70 sm:gap-3 sm:px-8 ${
+                      idx !== 0 ? "border-t border-ledger-border-soft" : ""
+                    }`}
+                  >
+                    {/* Left Column: Details & Date */}
+                    <div className="col-span-7 min-w-0 sm:col-span-5">
+                      <div className="truncate text-[15px] font-medium text-ledger-ink">
+                        {item.title}
+                      </div>
+                      <div className="mt-0.5 text-xs text-ledger-faint">
+                        {item.date}
+                      </div>
+                      {item.subPerson && (
+                        <div className="text-xs font-semibold text-ledger-brass-dark">
+                          {item.subPerson}
+                        </div>
+                      )}
+                      <div className="mt-0.5 text-xs font-medium text-ledger-muted">
+                        Balance ₹ {item.balance}
+                      </div>
+                    </div>
+
+                    {/* Lene Amount Column */}
+                    <div className="col-span-2 hidden text-right font-serif text-base font-semibold tabular-nums text-ledger-red sm:block">
+                      {item.leneAmount ? (
+                        `₹${item.leneAmount}`
+                      ) : (
+                        <span className="text-ledger-dash">—</span>
+                      )}
+                    </div>
+
+                    {/* Dene Amount Column */}
+                    <div className="col-span-2 hidden text-right font-serif text-base font-semibold tabular-nums text-ledger-green sm:block">
+                      {item.deneAmount ? (
+                        `₹${item.deneAmount}`
+                      ) : (
+                        <span className="text-ledger-dash">—</span>
+                      )}
+                    </div>
+
+                    {/* Right Column: Status Toggle & Actions */}
+                    <div className="col-span-5 flex items-center justify-end gap-1.5 sm:col-span-3">
+                      {/* Mobile-only inline amount */}
+                      <div className="mr-auto font-serif text-sm font-semibold tabular-nums sm:hidden">
+                        {item.leneAmount && (
+                          <span className="text-ledger-red">
+                            ₹{item.leneAmount}
+                          </span>
+                        )}
+                        {item.deneAmount && (
+                          <span className="text-ledger-green">
+                            ₹{item.deneAmount}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleConfirmStatus(item.id)}
+                        title={
+                          isConfirmed
+                            ? "Confirmed (locked)"
+                            : "Unconfirmed — tap to lock"
+                        }
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition active:scale-95 ${
+                          isConfirmed
+                            ? "bg-ledger-green text-white"
+                            : "border border-ledger-border-hover bg-ledger-paper-muted text-ledger-faint hover:bg-ledger-hover-strong"
+                        }`}
+                      >
+                        {isConfirmed ? (
+                          <Check size={13} strokeWidth={3} />
+                        ) : (
+                          "N"
+                        )}
+                      </button>
+
+                      {!isConfirmed && (
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditTransaction(item)}
+                            aria-label="Edit transaction"
+                            title="Edit transaction"
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ledger-faint hover:bg-ledger-hover-strong hover:text-ledger-brass-dark active:scale-95"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDeleteTransaction(item)}
+                            aria-label="Delete transaction"
+                            title="Delete transaction"
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ledger-faint hover:bg-rose-50 hover:text-ledger-red active:scale-95"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex w-full flex-col items-center justify-center py-20 text-center text-ledger-faint">
+              <AlertCircle size={32} className="stroke-1 text-ledger-icon-faint" />
+              <p className="mt-2 text-sm font-medium text-ledger-muted">
+                No transactions recorded yet.
+              </p>
+              <p className="text-xs text-ledger-faint">
+                Use Lene or Dene below to add the first entry.
+              </p>
+            </div>
+          )}
+        </div>
       </main>
 
-      {/* 5. BOTTOM ACTION BAR (Sticky to layout, zero sidebar overlap) */}
-      <footer className="sticky bottom-0 z-10 mt-auto border-t border-slate-200 bg-white/95 p-2.5 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl gap-3">
+      {/* 3. FULL-WIDTH FIXED LENE & DENE BOTTOM BAR */}
+      <footer className="w-full shrink-0 border-t border-ledger-ink bg-ledger-paper p-2.5 shadow-[0_-3px_10px_rgba(0,0,0,0.08)]">
+        <div className="flex w-full gap-3 px-1 sm:px-6">
           <button
             type="button"
             onClick={() => handleOpenModal("LENE")}
-            className="flex flex-1 flex-col items-center justify-center rounded-lg bg-rose-600 py-2 text-white shadow-xs transition hover:bg-rose-700 active:scale-[0.99]"
+            className="flex flex-1 flex-col items-center justify-center rounded-xl bg-ledger-red py-2 text-white shadow-sm transition hover:bg-ledger-red-dark active:scale-[0.99]"
           >
-            <span className="text-xs font-bold uppercase tracking-wider">LENE ₹</span>
+            <span className="text-sm font-semibold tracking-wide">Lene ₹</span>
             <span className="text-[11px] opacity-90">Amount Diya</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleOpenModal("DENE")}
-            className="flex flex-1 flex-col items-center justify-center rounded-lg bg-emerald-600 py-2 text-white shadow-xs transition hover:bg-emerald-700 active:scale-[0.99]"
+            className="flex flex-1 flex-col items-center justify-center rounded-xl bg-ledger-green py-2 text-white shadow-sm transition hover:bg-ledger-green-dark active:scale-[0.99]"
           >
-            <span className="text-xs font-bold uppercase tracking-wider">DENE ₹</span>
+            <span className="text-sm font-semibold tracking-wide">Dene ₹</span>
             <span className="text-[11px] opacity-90">Amount Liya</span>
           </button>
         </div>
       </footer>
 
-      {/* 6. MODALS */}
+      {/* 4. MODALS */}
 
       {/* MONDAY FINAL CONFIRMATION MODAL */}
       <Modal
@@ -838,8 +1006,9 @@ export default function CustomerDetail() {
       >
         <div className="p-6 text-center sm:p-7">
           <p className="text-sm leading-relaxed text-slate-600 sm:text-base">
-            You really want to Monday Final. After this you are not able to update this customer's
-            transactions, and all transactions of this user in the recycle bin will be deleted.
+            You really want to Monday Final. After this you are not able to
+            update this customer's transactions, and all transactions of this
+            user in the recycle bin will be deleted.
           </p>
 
           <div className="mt-7 flex items-center justify-center gap-3 sm:gap-4">
@@ -874,9 +1043,12 @@ export default function CustomerDetail() {
         title="Edit Customer"
         preventClose={isSubmitting}
       >
-        <form onSubmit={handleCustomerUpdate} className="flex flex-col gap-4 p-5 sm:p-6">
+        <form
+          onSubmit={handleCustomerUpdate}
+          className="flex flex-col gap-4 p-5 sm:p-6"
+        >
           <div className="space-y-1">
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="text"
                 maxLength={36}
@@ -893,9 +1065,11 @@ export default function CustomerDetail() {
             </div>
           </div>
 
-          <div className="relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15">
+          <div className="relative flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
             <div className="flex items-center gap-1 border-r border-slate-200 pr-3">
-              <span className="inline-block whitespace-nowrap text-xs font-bold text-slate-700">🇮🇳 +91</span>
+              <span className="inline-block whitespace-nowrap text-xs font-bold text-slate-700">
+                🇮🇳 +91
+              </span>
               <span className="text-[10px] text-slate-400">▼</span>
             </div>
             <input
@@ -909,7 +1083,7 @@ export default function CustomerDetail() {
           </div>
 
           <div className="space-y-1">
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="text"
                 maxLength={36}
@@ -925,7 +1099,11 @@ export default function CustomerDetail() {
             </div>
           </div>
 
-          <Button type="submit" loading={isSubmitting} loadingText="Updating...">
+          <Button
+            type="submit"
+            loading={isSubmitting}
+            loadingText="Updating..."
+          >
             Update Customer
           </Button>
 
@@ -952,8 +1130,8 @@ export default function CustomerDetail() {
       >
         <div className="p-6 text-center sm:p-7">
           <p className="text-sm font-medium leading-relaxed text-slate-600 sm:text-base">
-            Do you want to delete this customer? All transaction records associated with this customer
-            will be deleted.
+            Do you want to delete this customer? All transaction records
+            associated with this customer will be deleted.
           </p>
 
           <div className="mt-8 flex items-center justify-center gap-4">
@@ -989,19 +1167,24 @@ export default function CustomerDetail() {
         title={
           <span
             className={`flex items-center justify-center gap-1 font-bold ${
-              activeModal === "LENE" ? "text-rose-600" : "text-emerald-600"
+              activeModal === "LENE" ? "text-ledger-red" : "text-ledger-green"
             }`}
           >
             <span>₹</span>
             <span>{activeModal === "LENE" ? "Lene" : "Dene"}</span>
-            <span>-</span>
-            <span className="max-w-[150px] truncate">{customer?.customer_name}</span>
+            <span>·</span>
+            <span className="max-w-[150px] truncate">
+              {customer?.customer_name}
+            </span>
           </span>
         }
       >
-        <form onSubmit={handleEntrySubmit} className="flex flex-col gap-4 p-5 sm:p-6">
+        <form
+          onSubmit={handleEntrySubmit}
+          className="flex flex-col gap-4 p-5 sm:p-6"
+        >
           <div className="space-y-1">
-            <div className="relative flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15">
+            <div className="relative flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="number"
                 step="any"
@@ -1023,7 +1206,7 @@ export default function CustomerDetail() {
           </div>
 
           <div className="space-y-1">
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="text"
                 maxLength={36}
@@ -1045,8 +1228,8 @@ export default function CustomerDetail() {
             loadingText="Saving..."
             className={
               activeModal === "LENE"
-                ? "!bg-rose-600 hover:!bg-rose-700 active:scale-[0.99]"
-                : "!bg-emerald-600 hover:!bg-emerald-700 active:scale-[0.99]"
+                ? "!bg-ledger-red hover:!bg-ledger-red-dark active:scale-[0.99]"
+                : "!bg-ledger-green hover:!bg-ledger-green-dark active:scale-[0.99]"
             }
           >
             Save
@@ -1061,12 +1244,15 @@ export default function CustomerDetail() {
         preventClose={isSubmitting}
         title="Edit Transaction"
       >
-        <form onSubmit={handleUpdateTransactionSubmit} className="flex flex-col gap-4 p-5 sm:p-6">
+        <form
+          onSubmit={handleUpdateTransactionSubmit}
+          className="flex flex-col gap-4 p-5 sm:p-6"
+        >
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            <label className="text-[11px] font-semibold text-slate-500">
               Amount
             </label>
-            <div className="relative flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15">
+            <div className="relative flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="number"
                 step="any"
@@ -1081,10 +1267,10 @@ export default function CustomerDetail() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            <label className="text-[11px] font-semibold text-slate-500">
               Description
             </label>
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="text"
                 maxLength={100}
@@ -1098,10 +1284,10 @@ export default function CustomerDetail() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            <label className="text-[11px] font-semibold text-slate-500">
               Reference Number
             </label>
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="text"
                 maxLength={50}
@@ -1115,10 +1301,10 @@ export default function CustomerDetail() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            <label className="text-[11px] font-semibold text-slate-500">
               Transaction Date
             </label>
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="date"
                 required
@@ -1130,7 +1316,11 @@ export default function CustomerDetail() {
             </div>
           </div>
 
-          <Button type="submit" loading={isSubmitting} loadingText="Updating...">
+          <Button
+            type="submit"
+            loading={isSubmitting}
+            loadingText="Updating..."
+          >
             Update Transaction
           </Button>
         </form>
@@ -1148,8 +1338,10 @@ export default function CustomerDetail() {
         <div className="p-6 text-center sm:p-7">
           <p className="text-sm font-medium leading-relaxed text-slate-600 sm:text-base">
             Are you sure you want to delete this{" "}
-            <span className="font-bold text-slate-900">{activeTransaction?.title}</span> entry? This
-            action cannot be undone.
+            <span className="font-bold text-slate-900">
+              {activeTransaction?.title}
+            </span>{" "}
+            entry? This action cannot be undone.
           </p>
 
           <div className="mt-8 flex items-center justify-center gap-4">

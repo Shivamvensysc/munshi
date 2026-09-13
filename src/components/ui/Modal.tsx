@@ -60,7 +60,7 @@ export default function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 backdrop-blur-sm p-0 animate-in fade-in duration-150 sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ledger-backdrop/60 p-0 backdrop-blur-sm animate-in fade-in duration-150 sm:items-center sm:p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && !preventClose) onClose();
       }}
@@ -69,21 +69,28 @@ export default function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-slate-200/70 bg-white shadow-2xl ring-1 ring-black/5 animate-in slide-in-from-bottom-6 zoom-in-95 duration-200 sm:rounded-2xl sm:slide-in-from-bottom-2 ${sizeClasses[size]}`}
+        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-ledger-border bg-ledger-paper shadow-2xl ring-1 ring-black/5 animate-in slide-in-from-bottom-6 zoom-in-95 duration-200 sm:rounded-2xl sm:slide-in-from-bottom-2 ${sizeClasses[size]}`}
       >
+        {/* Thin accent rule across the top — brass by default, ledger red for destructive confirmations */}
+        <div
+          className={`h-1 w-full shrink-0 ${
+            tone === "danger" ? "bg-ledger-red" : "bg-ledger-brass"
+          }`}
+        />
+
         {(title || !preventClose) && (
           <div
             className={`relative flex shrink-0 items-center justify-center gap-2 border-b px-5 py-4 ${
               tone === "danger"
-                ? "border-rose-100 bg-gradient-to-r from-rose-50 to-white"
-                : "border-slate-100 bg-white"
+                ? "border-ledger-red-border bg-gradient-to-r from-ledger-red-wash-soft to-ledger-paper"
+                : "border-ledger-border-soft bg-ledger-paper"
             }`}
           >
             {leading && <div className="absolute left-4">{leading}</div>}
             {title && (
               <h2
-                className={`text-center text-base font-extrabold sm:text-lg ${
-                  tone === "danger" ? "text-rose-700" : "text-ink-900"
+                className={`text-center font-serif text-base font-semibold sm:text-lg ${
+                  tone === "danger" ? "text-ledger-red" : "text-ledger-ink"
                 }`}
               >
                 {title}
@@ -94,7 +101,7 @@ export default function Modal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="absolute right-3 flex h-8 w-8 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-slate-100 hover:text-ink-700 active:scale-95"
+                className="absolute right-3 flex h-8 w-8 items-center justify-center rounded-full text-ledger-faint transition-colors hover:bg-ledger-hover hover:text-ledger-ink active:scale-95"
               >
                 <X size={18} />
               </button>
@@ -102,9 +109,11 @@ export default function Modal({
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto bg-ledger-paper">
+          {children}
+        </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

@@ -7,44 +7,70 @@
      max-width instead of jumping straight from mobile to `sm`. */
   --breakpoint-xs: 420px;
 
-  /* Brand blue - the ledger header / navigation gradient */
-  --color-brand-950: #0a1f52;
-  --color-brand-900: #0f2a68;
-  --color-brand-800: #123785;
-  --color-brand-700: #1746a3;
-  --color-brand-600: #1f5bc4;
-  --color-brand-500: #3373db;
-  --color-brand-400: #5c94ea;
-  --color-brand-300: #8fb6f2;
-  --color-brand-100: #dbe8fb;
-  --color-brand-50: #f0f6fe;
+  /* ─── Ledger palette ────────────────────────────────────────────────── */
+  /* Single source of truth for every color used across the app's warm,
+     "paper ledger" visual identity. Each token below is a real CSS custom
+     property (Tailwind v4's @theme also turns it into matching utilities,
+     e.g. --color-ledger-brass -> bg-ledger-brass / text-ledger-brass /
+     border-ledger-brass / etc.), so changing a shade here updates every
+     page, modal, and component that uses it — no more one-off hex codes
+     scattered through className strings. */
 
-  /* Deep violet - primary actions */
-  --color-violet-950: #1e1147;
-  --color-violet-900: #2a1668;
-  --color-violet-800: #3a1f8a;
-  --color-violet-700: #4827a8;
-  --color-violet-600: #5934c4;
-  --color-violet-500: #7248dd;
+  /* Surfaces */
+  --color-ledger-bg: #f2eee2; /* page background */
+  --color-ledger-paper: #fffdf7; /* card / panel / modal surface */
+  --color-ledger-paper-alt: #fbf8f0; /* form input fields (auth pages) */
+  --color-ledger-paper-muted: #faf7f0; /* secondary surface (e.g. default toggle bg) */
+  --color-ledger-cream-tint: #fbf3e1; /* dashed "create new" card tint */
+  --color-ledger-hover: #f5efdf; /* default hover tint */
+  --color-ledger-hover-strong: #f0e9d4; /* deeper hover tint (icon buttons) */
+  --color-ledger-hover-alt: #efe7d4; /* header back-button hover */
 
-  /* Ledger semantics */
-  --color-credit-600: #0f9d58;
-  --color-credit-500: #16b366;
-  --color-debit-600: #d33b3b;
-  --color-debit-500: #e6533f;
+  /* Borders / dividers */
+  --color-ledger-border: #e4dcc7; /* default border */
+  --color-ledger-border-soft: #ede6d2; /* hairline divider */
+  --color-ledger-border-hover: #d8cba6; /* hover border */
+  --color-ledger-border-gold: #d8b876; /* dashed gold border accent */
 
-  --color-ink-900: #12172b;
-  --color-ink-700: #384057;
-  --color-ink-500: #6b7590;
-  --color-ink-300: #b0b8cc;
-  --color-ink-100: #e7ebf3;
-  --color-ink-50: #f5f7fb;
+  /* Text */
+  --color-ledger-ink: #22283a; /* primary navy text / navy surfaces */
+  --color-ledger-ink-dark: #1b2133; /* navy hover / darker navy */
+  --color-ledger-muted: #6b6350; /* secondary text */
+  --color-ledger-faint: #9b937e; /* tertiary / faint text */
+  --color-ledger-subtle: #8a806c; /* subtitle text */
+  --color-ledger-placeholder: #b4ab93; /* input placeholders */
+  --color-ledger-slate: #4c5568; /* cool secondary figure (opening balance) */
+  --color-ledger-icon: #5b5240; /* muted default icon color */
+  --color-ledger-icon-faint: #c7bc9c; /* large empty-state icon */
+  --color-ledger-dash: #d9d2be; /* "—" placeholder dash */
+  --color-ledger-navy-text: #cbd1e0; /* secondary text on navy surfaces */
+
+  /* Brass accent (primary actions) */
+  --color-ledger-brass: #a67c3d;
+  --color-ledger-brass-dark: #8c6a2f;
+  --color-ledger-brass-darker: #6e5423;
+  --color-ledger-brass-light: #c89b4c;
+  --color-ledger-gold: #e9c97c;
+
+  /* Semantic: Lene (red / debit) & Dene (green / credit) */
+  --color-ledger-red: #a6403a;
+  --color-ledger-red-dark: #8f332e;
+  --color-ledger-red-wash: #f7eae8;
+  --color-ledger-red-wash-soft: #fbf0ef;
+  --color-ledger-red-border: #f0d9d6;
+  --color-ledger-green: #2f6b4f;
+  --color-ledger-green-dark: #265941;
+  --color-ledger-green-wash: #eaf3ec;
+  --color-ledger-mint: #7fcba2; /* light green accent text on navy cards */
+
+  /* Overlay */
+  --color-ledger-backdrop: #14181f; /* modal / sheet backdrop tint */
 
   --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --shadow-card: 0 1px 2px rgba(15, 42, 104, 0.06), 0 8px 24px -12px rgba(15, 42, 104, 0.18);
-  --shadow-lift: 0 10px 30px -10px rgba(20, 30, 80, 0.35);
+  --shadow-card: 0 1px 2px rgba(34, 40, 58, 0.06), 0 8px 24px -12px rgba(34, 40, 58, 0.18);
+  --shadow-lift: 0 10px 30px -10px rgba(20, 24, 31, 0.35);
 }
 
 @layer base {
@@ -53,15 +79,15 @@
   }
   body {
     font-family: var(--font-body);
-    color: var(--color-ink-900);
-    background: var(--color-ink-50);
+    color: var(--color-ledger-ink);
+    background: var(--color-ledger-bg);
     -webkit-tap-highlight-color: transparent;
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
   }
   input::placeholder {
-    color: var(--color-ink-300);
+    color: var(--color-ledger-placeholder);
   }
 }
 
@@ -79,7 +105,7 @@
 }
 
 /* ─── Toasts (react-toastify) ──────────────────────────────────────────── */
-/* Restyled to match the app's rounded, soft-shadow, brand-colored look
+/* Restyled to match the app's rounded, soft-shadow, ledger-colored look
    instead of the library's square default cards. */
 .Toastify__toast-container {
   --toastify-toast-width: 360px;
@@ -91,19 +117,19 @@
   font-family: var(--font-body);
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--color-ink-900) !important;
-  background: #ffffff !important;
-  box-shadow: 0 1px 2px rgba(15, 42, 104, 0.06), 0 12px 28px -10px rgba(15, 42, 104, 0.25) !important;
-  border: 1px solid var(--color-ink-100) !important;
+  color: var(--color-ledger-ink) !important;
+  background: var(--color-ledger-paper) !important;
+  box-shadow: 0 1px 2px rgba(34, 40, 58, 0.06), 0 12px 28px -10px rgba(34, 40, 58, 0.25) !important;
+  border: 1px solid var(--color-ledger-border) !important;
 }
 .Toastify__toast--success.app-toast {
-  border-left: 4px solid var(--color-credit-600) !important;
+  border-left: 4px solid var(--color-ledger-green) !important;
 }
 .Toastify__toast--error.app-toast {
-  border-left: 4px solid var(--color-debit-600) !important;
+  border-left: 4px solid var(--color-ledger-red) !important;
 }
 .Toastify__toast--info.app-toast {
-  border-left: 4px solid var(--color-brand-600) !important;
+  border-left: 4px solid var(--color-ledger-brass) !important;
 }
 .Toastify__toast--warning.app-toast {
   border-left: 4px solid #d97706 !important;
@@ -113,9 +139,9 @@
   opacity: 0.6;
 }
 .Toastify__close-button {
-  color: var(--color-ink-300) !important;
+  color: var(--color-ledger-faint) !important;
   opacity: 1 !important;
 }
 .Toastify__close-button:hover {
-  color: var(--color-ink-700) !important;
+  color: var(--color-ledger-muted) !important;
 }

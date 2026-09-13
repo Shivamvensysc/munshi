@@ -18,13 +18,28 @@ import { authService } from "../services";
 // behaviour are unchanged, only where you tap to reach them.
 const primaryTabs = [
   { id: "dashboard", label: "Customers", to: "/dashboard", icon: Users },
-  { id: "ledger", label: "Transaction", to: "/ledger-entries-page", icon: IndianRupee },
-  { id: "cross", label: "Cross Entry", to: "/payment-transfer-form", icon: ArrowLeftRight },
+  {
+    id: "ledger",
+    label: "Transaction",
+    to: "/ledger-entries-page",
+    icon: IndianRupee,
+  },
+  {
+    id: "cross",
+    label: "Cross Entry",
+    to: "/payment-transfer-form",
+    icon: ArrowLeftRight,
+  },
 ];
 
 const moreLinks = [
   { id: "khata", label: "Khata Book", to: "/khatalist", icon: BookOpen },
-  { id: "account", label: "Account & More", to: "/account-profile-page", icon: UserCircle2 },
+  {
+    id: "account",
+    label: "Account & More",
+    to: "/account-profile-page",
+    icon: UserCircle2,
+  },
 ];
 
 export default function BottomNavBar() {
@@ -35,7 +50,9 @@ export default function BottomNavBar() {
   // "More" itself should look active when the user is actually on one of
   // the pages it leads to, same as the old sidebar highlighting Khata Book
   // or Account as the active link.
-  const isMoreActive = moreLinks.some((link) => location.pathname.startsWith(link.to));
+  const isMoreActive = moreLinks.some((link) =>
+    location.pathname.startsWith(link.to),
+  );
 
   const handleLogout = () => {
     setIsMoreOpen(false);
@@ -46,7 +63,7 @@ export default function BottomNavBar() {
   return (
     <>
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-between border-t border-slate-200 bg-white/95 px-2 backdrop-blur-md"
+        className="fixed inset-x-0 bottom-0 z-40 flex w-full items-stretch justify-between border-t border-ledger-border bg-ledger-paper/95 px-2 backdrop-blur-md"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         {primaryTabs.map((item) => {
@@ -57,7 +74,9 @@ export default function BottomNavBar() {
               to={item.to}
               className={({ isActive }) =>
                 `flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-semibold transition-colors ${
-                  isActive ? "text-brand-600" : "text-ink-400 hover:text-brand-500"
+                  isActive
+                    ? "text-ledger-brass-dark"
+                    : "text-ledger-faint hover:text-ledger-brass-dark"
                 }`
               }
             >
@@ -71,7 +90,9 @@ export default function BottomNavBar() {
           type="button"
           onClick={() => setIsMoreOpen(true)}
           className={`flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-semibold transition-colors ${
-            isMoreActive ? "text-brand-600" : "text-ink-400 hover:text-brand-500"
+            isMoreActive
+              ? "text-ledger-brass-dark"
+              : "text-ledger-faint hover:text-ledger-brass-dark"
           }`}
         >
           <MoreHorizontal size={22} />
@@ -82,19 +103,23 @@ export default function BottomNavBar() {
       {/* "More" sheet — Khata Book, Account & Logout, same as the old sidebar footer */}
       {isMoreOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 backdrop-blur-sm sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ledger-backdrop/60 backdrop-blur-sm sm:items-center"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setIsMoreOpen(false);
           }}
         >
-          <div className="w-full overflow-hidden rounded-t-3xl border border-slate-200/70 bg-white shadow-2xl sm:max-w-sm sm:rounded-2xl">
-            <div className="relative flex items-center justify-center border-b border-slate-100 px-5 py-4">
-              <h2 className="text-base font-extrabold text-ink-900">More</h2>
+          <div className="w-full overflow-hidden rounded-t-3xl border border-ledger-border bg-ledger-paper shadow-2xl sm:max-w-sm sm:rounded-2xl">
+            <div className="h-1 w-full bg-ledger-brass" />
+
+            <div className="relative flex items-center justify-center border-b border-ledger-border-soft px-5 py-4">
+              <h2 className="font-serif text-base font-semibold text-ledger-ink">
+                More
+              </h2>
               <button
                 type="button"
                 onClick={() => setIsMoreOpen(false)}
                 aria-label="Close"
-                className="absolute right-3 flex h-8 w-8 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-slate-100 hover:text-ink-700 active:scale-95"
+                className="absolute right-3 flex h-8 w-8 items-center justify-center rounded-full text-ledger-faint transition-colors hover:bg-ledger-hover hover:text-ledger-ink active:scale-95"
               >
                 <X size={18} />
               </button>
@@ -110,7 +135,9 @@ export default function BottomNavBar() {
                     onClick={() => setIsMoreOpen(false)}
                     className={({ isActive }) =>
                       `flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors ${
-                        isActive ? "bg-brand-50 text-brand-700" : "text-ink-700 hover:bg-slate-50"
+                        isActive
+                          ? "bg-ledger-brass/10 text-ledger-brass-dark"
+                          : "text-ledger-ink hover:bg-ledger-hover"
                       }`
                     }
                   >
@@ -120,12 +147,12 @@ export default function BottomNavBar() {
                 );
               })}
 
-              <div className="my-2 h-px bg-slate-100" />
+              <div className="my-2 h-px bg-ledger-border-soft" />
 
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-ledger-red transition-colors hover:bg-ledger-red/5"
               >
                 <LogOut size={19} />
                 <span>Logout</span>

@@ -15,8 +15,14 @@ export default function StoreHeaderBar() {
 
   // Shared khata state are  — the same values every page reads via useKhata(),
   // so selecting a khata here is instantly visible everywhere else too.
-  const { khatasList, isLoadingKhatas, selectedKhataId, selectedKhata, selectKhata, addKhata } =
-    useKhata();
+  const {
+    khatasList,
+    isLoadingKhatas,
+    selectedKhataId,
+    selectedKhata,
+    selectKhata,
+    addKhata,
+  } = useKhata();
 
   // Dropdown open/close state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -29,7 +35,10 @@ export default function StoreHeaderBar() {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     }
@@ -75,15 +84,15 @@ export default function StoreHeaderBar() {
   };
 
   return (
-    <header className="relative z-40 w-full border-b border-slate-200/70 bg-white/90 px-3 py-3 shadow-sm backdrop-blur-md sm:px-6">
-      <div className="flex items-center justify-between gap-2 sm:gap-4">
+    <header className="relative z-40 w-full border-b border-ledger-border bg-ledger-paper/95 px-3 py-3 shadow-sm backdrop-blur-md sm:px-6">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 sm:gap-4">
         {/* Left cluster: khata selector */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {/* Khata Dropdown Container */}
           <div className="relative min-w-0" ref={dropdownRef}>
             {isLoadingKhatas ? (
-              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-ink-400 sm:px-4 sm:text-sm">
-                <Spinner size={14} className="text-brand-600" />
+              <div className="flex items-center gap-2 rounded-lg border border-ledger-border bg-ledger-paper px-3 py-2 text-xs font-semibold text-ledger-faint sm:px-4 sm:text-sm">
+                <Spinner size={14} className="text-ledger-brass-dark" />
                 <span>Loading…</span>
               </div>
             ) : khatasList.length === 0 ? (
@@ -91,7 +100,7 @@ export default function StoreHeaderBar() {
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-700 to-brand-600 px-2.5 py-2 text-xs font-semibold text-white shadow-sm shadow-brand-600/20 transition-all hover:from-brand-600 hover:to-brand-500 active:scale-95 sm:gap-2 sm:px-4 sm:text-sm cursor-pointer"
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-ledger-brass px-2.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-ledger-brass-dark active:scale-95 sm:gap-2 sm:px-4 sm:text-sm"
               >
                 <Plus size={16} className="shrink-0 stroke-[2.5]" />
                 <span className="whitespace-nowrap">Create Khata</span>
@@ -101,15 +110,15 @@ export default function StoreHeaderBar() {
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-brand-900 shadow-sm transition-all hover:border-brand-300 hover:bg-brand-50 active:scale-95 sm:gap-2 sm:px-4 sm:text-sm cursor-pointer"
+                className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-ledger-border bg-ledger-paper px-2.5 py-2 text-xs font-semibold text-ledger-ink shadow-sm transition-all hover:border-ledger-border-hover hover:bg-ledger-hover active:scale-95 sm:gap-2 sm:px-4 sm:text-sm"
               >
-                <BookOpen size={16} className="shrink-0 text-brand-600" />
-                <span className="truncate max-w-[110px] xs:max-w-[160px] sm:max-w-[220px]">
+                <BookOpen size={16} className="shrink-0 text-ledger-brass-dark" />
+                <span className="xs:max-w-[160px] max-w-[110px] truncate sm:max-w-[220px]">
                   {selectedKhata?.name || "Select Khata"}
                 </span>
                 <ChevronDown
                   size={14}
-                  className={`shrink-0 text-slate-400 transition-transform duration-200 ${
+                  className={`shrink-0 text-ledger-faint transition-transform duration-200 ${
                     isDropdownOpen ? "rotate-180" : ""
                   }`}
                 />
@@ -118,13 +127,13 @@ export default function StoreHeaderBar() {
 
             {/* Dropdown Menu (Available when Khatas exist) */}
             {isDropdownOpen && khatasList.length > 0 && (
-              <div className="absolute left-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl transition-all z-50 sm:w-64">
-                <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="absolute left-0 z-50 mt-2 w-56 rounded-xl border border-ledger-border bg-ledger-paper py-1.5 shadow-xl transition-all sm:w-64">
+                <div className="px-3 py-1.5 text-[11px] font-semibold text-ledger-faint">
                   Your Khatas
                 </div>
 
                 {/* List of Khatas */}
-                <div className="max-h-48 divide-y divide-slate-100 overflow-y-auto">
+                <div className="max-h-48 divide-y divide-ledger-border-soft overflow-y-auto">
                   {khatasList.map((khata) => {
                     const isSelected = khata.id === selectedKhataId;
                     return (
@@ -135,29 +144,41 @@ export default function StoreHeaderBar() {
                           selectKhata(khata.id, khata.name);
                           setIsDropdownOpen(false);
                         }}
-                        className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-slate-50 sm:text-sm cursor-pointer ${
-                          isSelected ? "bg-brand-50/60 text-brand-700" : "text-slate-700"
+                        className={`flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-ledger-hover sm:text-sm ${
+                          isSelected
+                            ? "bg-ledger-brass/10 text-ledger-brass-dark"
+                            : "text-ledger-muted"
                         }`}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <BookOpen size={14} className={isSelected ? "text-brand-600" : "text-slate-400"} />
+                          <BookOpen
+                            size={14}
+                            className={
+                              isSelected ? "text-ledger-brass-dark" : "text-ledger-placeholder"
+                            }
+                          />
                           <span className="truncate">{khata.name}</span>
                         </div>
-                        {isSelected && <Check size={14} className="shrink-0 text-brand-600" />}
+                        {isSelected && (
+                          <Check
+                            size={14}
+                            className="shrink-0 text-ledger-green"
+                          />
+                        )}
                       </button>
                     );
                   })}
                 </div>
 
                 {/* Action to create another new Khata inside dropdown */}
-                <div className="mt-1 border-t border-slate-100 pt-1">
+                <div className="mt-1 border-t border-ledger-border-soft pt-1">
                   <button
                     type="button"
                     onClick={() => {
                       setIsDropdownOpen(false);
                       setIsCreateModalOpen(true);
                     }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-brand-600 transition-colors hover:bg-brand-50 sm:text-sm cursor-pointer"
+                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-ledger-brass-dark transition-colors hover:bg-ledger-hover sm:text-sm"
                   >
                     <Plus size={15} className="stroke-[2.5]" />
                     <span>+ Create New Khata</span>
@@ -173,10 +194,14 @@ export default function StoreHeaderBar() {
           <button
             type="button"
             onClick={handleAddCustomer}
-            className="flex items-center justify-center gap-1 rounded-lg bg-gradient-to-r from-violet-700 to-violet-600 px-2.5 py-2 text-xs font-semibold text-white shadow-sm shadow-violet-600/25 transition-all hover:from-violet-600 hover:to-violet-500 active:scale-95 sm:gap-1.5 sm:px-4 sm:text-sm cursor-pointer"
+            aria-label="Add Customer"
+            className="flex cursor-pointer items-center justify-center gap-1 rounded-lg bg-ledger-ink px-2.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-ledger-ink-dark active:scale-95 sm:gap-1.5 sm:px-4 sm:text-sm"
           >
             <Plus size={16} className="shrink-0 stroke-[2.5]" />
-            <span className="whitespace-nowrap">Add Customer</span>
+            {/* Label hides on the very narrowest phones so this button can
+                never force the header to overflow horizontally — icon alone
+                still communicates the action there. */}
+            <span className="hidden whitespace-nowrap xs:inline">Add Customer</span>
           </button>
 
           {/* Was `hidden sm:flex` before — completely unreachable on phones.
@@ -185,7 +210,7 @@ export default function StoreHeaderBar() {
             type="button"
             onClick={() => navigate("/account-profile-page")}
             aria-label="Account"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-brand-700 transition-colors hover:bg-brand-50 active:scale-95"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ledger-border bg-ledger-hover text-ledger-brass-dark transition-colors hover:bg-ledger-border-soft active:scale-95"
           >
             <UserCircle2 size={20} />
           </button>
@@ -200,9 +225,12 @@ export default function StoreHeaderBar() {
         preventClose={isCreating}
         size="sm"
       >
-        <form onSubmit={handleCreateKhataSubmit} className="flex flex-col gap-4 p-5 sm:p-6">
+        <form
+          onSubmit={handleCreateKhataSubmit}
+          className="flex flex-col gap-4 p-5 sm:p-6"
+        >
           <div className="space-y-1">
-            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600/15">
+            <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
               <input
                 type="text"
                 maxLength={20}
@@ -212,10 +240,10 @@ export default function StoreHeaderBar() {
                 value={newKhataName}
                 onChange={(e) => setNewKhataName(e.target.value)}
                 placeholder="Enter Shop/Business Name"
-                className="w-full bg-transparent text-sm font-medium text-ink-900 outline-none placeholder:text-ink-300 disabled:opacity-50"
+                className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400 disabled:opacity-50"
               />
             </div>
-            <div className="text-right text-[11px] font-medium text-ink-300">
+            <div className="text-right text-[11px] font-medium text-slate-400">
               {newKhataName.length}/20
             </div>
           </div>
