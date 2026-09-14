@@ -11,6 +11,8 @@
 //   Users,
 //   IndianRupee,
 //   Loader2,
+//   ChevronDown,
+//   Check,
 // } from "lucide-react";
 // import { toast } from "react-toastify";
 // import Modal from "../components/ui/Modal";
@@ -70,10 +72,14 @@
 //   const [newContactNo, setNewContactNo] = useState("");
 //   const [newAddress, setNewAddress] = useState("");
 
-//   // "Add Single" Transaction Popup State (bottom-right + icon on Dashboard)
+//   // "Add Single" Transaction Popup State
 //   const [isAddTxnModalOpen, setIsAddTxnModalOpen] = useState(false);
 //   const [isSubmittingTxn, setIsSubmittingTxn] = useState(false);
 //   const [txnCustomerId, setTxnCustomerId] = useState("");
+//   const [txnCustomerSearch, setTxnCustomerSearch] = useState("");
+//   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+//   const customerDropdownRef = useRef<HTMLDivElement>(null);
+
 //   const [txnType, setTxnType] = useState<"" | "LENE" | "DENE">("");
 //   const [txnAmount, setTxnAmount] = useState("");
 //   const [txnDescription, setTxnDescription] = useState("");
@@ -83,9 +89,7 @@
 //   const [totalDene, setTotalDene] = useState<number>(0);
 //   const [netBalance, setNetBalance] = useState<number>(0);
 
-//   // If we arrived here via the header's "Create Customer" shortcut, open
-//   // the Add Customer modal straight away instead of making the user click
-//   // it again.
+//   // Open Add Customer modal if routed from header shortcut
 //   useEffect(() => {
 //     const state = location.state as { openAddCustomer?: boolean } | null;
 //     if (state?.openAddCustomer) {
@@ -95,7 +99,7 @@
 //     // eslint-disable-next-line react-hooks/exhaustive-deps
 //   }, []);
 
-//   // Close filter dropdown on clicking outside
+//   // Close filter dropdown and customer select dropdown on click outside
 //   useEffect(() => {
 //     const handleClickOutside = (event: MouseEvent) => {
 //       if (
@@ -103,6 +107,12 @@
 //         !filterRef.current.contains(event.target as Node)
 //       ) {
 //         setIsFilterOpen(false);
+//       }
+//       if (
+//         customerDropdownRef.current &&
+//         !customerDropdownRef.current.contains(event.target as Node)
+//       ) {
+//         setIsCustomerDropdownOpen(false);
 //       }
 //     };
 //     document.addEventListener("mousedown", handleClickOutside);
@@ -148,10 +158,6 @@
 //   // GET API: Fetch customer list & stats in parallel
 //   const fetchDashboardData = async () => {
 //     if (!selectedKhataId) {
-//       // The khata list is still loading on first mount (its own fetch is
-//       // in flight) — selectedKhataId is briefly null before that resolves.
-//       // Only surface the "no khata" error once we know for sure there
-//       // really isn't one, instead of flashing it on every page load.
 //       if (!isLoadingKhatas) {
 //         toast.error("No Khata selected. Please select a Khata first.");
 //         setIsFetching(false);
@@ -167,14 +173,12 @@
 //         khataService.stats(selectedKhataId),
 //       ]);
 
-//       // Handle Customers List
 //       if (customersData.success && Array.isArray(customersData.data)) {
 //         setCustomers(customersData.data.map(mapCustomerData));
 //       } else {
 //         toast.error(customersData.message || "Failed to load customers.");
 //       }
 
-//       // Handle Khata Stats Card Data
 //       if (statsData.success && statsData.data) {
 //         const stats = statsData.data;
 //         setTotalLene(Number(stats.total_you_will_get || 0));
@@ -194,14 +198,10 @@
 
 //   useEffect(() => {
 //     fetchDashboardData();
-//     // Re-run whenever the active khata changes (header dropdown) so the
-//     // dashboard refreshes immediately instead of waiting for a route change.
-//     // Also re-run once khata loading finishes, so a genuinely-empty
-//     // selection (no khatas at all) still surfaces the error message above.
 //     // eslint-disable-next-line react-hooks/exhaustive-deps
 //   }, [selectedKhataId, isLoadingKhatas]);
 
-//   // Filter and Sort Customers
+//   // Filter and Sort Customers for list
 //   const filteredCustomers = customers
 //     .filter((customer) =>
 //       customer.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -222,7 +222,13 @@
 //       }
 //     });
 
-//   // Navigate to Customer Details page with khata_customer_id
+//   // Filter Customers inside the Modal dropdown
+//   const filteredModalCustomers = customers.filter((cust) =>
+//     cust.name.toLowerCase().includes(txnCustomerSearch.toLowerCase()),
+//   );
+
+//   const selectedCustomerObj = customers.find((c) => c.id === txnCustomerId);
+
 //   const handleCustomerClick = (khataCustomerId: string) => {
 //     navigate(`/customer-detail/${khataCustomerId}`);
 //   };
@@ -256,10 +262,8 @@
 //         const newCustomer = mapCustomerData(data.data);
 //         setCustomers((prev) => [newCustomer, ...prev]);
 
-//         // Refresh stats after adding a new customer
 //         fetchDashboardData();
 
-//         // Reset and close modal
 //         setNewCustomerName("");
 //         setNewContactNo("");
 //         setNewAddress("");
@@ -278,13 +282,14 @@
 
 //   const resetTxnForm = () => {
 //     setTxnCustomerId("");
+//     setTxnCustomerSearch("");
+//     setIsCustomerDropdownOpen(false);
 //     setTxnType("");
 //     setTxnAmount("");
 //     setTxnDescription("");
 //   };
 
-//   // POST API: Add Single Transaction (LENE / DENE) from the Dashboard's
-//   // floating "+" icon — separate from the "Add Customer" flow above.
+//   // POST API: Add Single Transaction
 //   const handleAddTransactionSubmit = async (e: FormEvent) => {
 //     e.preventDefault();
 
@@ -316,10 +321,9 @@
 
 //       if (data.success) {
 //         toast.success(data.message || "Transaction added successfully!");
+//         // Clear state without closing the modal
 //         resetTxnForm();
-//         setIsAddTxnModalOpen(false);
-
-//         // Refresh customer list & stats so balances reflect the new entry.
+//         // Refresh customer list & stats to keep values up to date
 //         fetchDashboardData();
 //       } else {
 //         toast.error(data.message || "Failed to add transaction.");
@@ -348,7 +352,6 @@
 
 //         {/* STAT CARDS */}
 //         <div className="mb-6 grid w-full grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-//           {/* Net Balance */}
 //           <div className="relative w-full overflow-hidden rounded-2xl border border-ledger-ink-dark bg-ledger-ink p-5 text-white shadow-sm">
 //             <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-ledger-brass-light/10 blur-2xl" />
 //             <div className="relative z-10 flex items-center justify-between">
@@ -367,7 +370,6 @@
 //             </div>
 //           </div>
 
-//           {/* You'll Give */}
 //           <div className="w-full rounded-2xl border border-ledger-border bg-ledger-paper p-5 shadow-sm">
 //             <div className="flex items-center justify-between">
 //               <span className="text-[13px] font-semibold text-ledger-muted">
@@ -385,7 +387,6 @@
 //             </div>
 //           </div>
 
-//           {/* You'll Get */}
 //           <div className="w-full rounded-2xl border border-ledger-border bg-ledger-paper p-5 shadow-sm">
 //             <div className="flex items-center justify-between">
 //               <span className="text-[13px] font-semibold text-ledger-muted">
@@ -420,7 +421,6 @@
 //             />
 //           </div>
 
-//           {/* Filter Button & Popup Dropdown Menu */}
 //           <div className="relative shrink-0" ref={filterRef}>
 //             <button
 //               type="button"
@@ -541,10 +541,14 @@
 //                 </button>
 //               ))
 //             ) : (
-//               <div className="p-8 text-center text-sm font-medium text-ledger-faint">
-//                 No customers found matching "{searchQuery}"
-//               </div>
-//             )}
+//   <div className="p-8 text-center text-sm font-medium text-ledger-faint">
+//     {searchQuery.trim() ? (
+//       <>No customers found matching "{searchQuery}"</>
+//     ) : (
+//       <>No customers found</>
+//     )}
+//   </div>
+// )}
 //           </div>
 //         </div>
 //       </div>
@@ -559,9 +563,7 @@
 //         <Plus size={24} className="stroke-[2.5]" />
 //       </button>
 
-//       {/* Floating add-transaction trigger — bottom right corner on every
-//           screen size, sits well clear of the fixed bottom nav bar and the
-//           mobile-only Add Customer FAB above. */}
+//       {/* Floating add-transaction trigger */}
 //       <button
 //         type="button"
 //         onClick={() => setIsAddTxnModalOpen(true)}
@@ -582,7 +584,6 @@
 //           onSubmit={handleAddCustomerSubmit}
 //           className="flex flex-col gap-4 p-5 sm:p-6"
 //         >
-//           {/* Customer Name Input */}
 //           <div className="space-y-1">
 //             <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
 //               <input
@@ -601,7 +602,6 @@
 //             </div>
 //           </div>
 
-//           {/* Contact No Input with Country Code */}
 //           <div>
 //             <div className="flex items-center rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
 //               <div className="mr-3 flex shrink-0 items-center gap-1.5 whitespace-nowrap border-r border-slate-200 pr-3 text-xs font-bold text-slate-700">
@@ -620,7 +620,6 @@
 //             </div>
 //           </div>
 
-//           {/* Address Input */}
 //           <div className="space-y-1">
 //             <div className="relative rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
 //               <input
@@ -638,7 +637,6 @@
 //             </div>
 //           </div>
 
-//           {/* Continue Submit Button */}
 //           <Button
 //             type="submit"
 //             loading={isSubmitting}
@@ -649,7 +647,7 @@
 //         </form>
 //       </Modal>
 
-//       {/* ADD SINGLE TRANSACTION POPUP MODAL — triggered by the bottom-right + icon */}
+//       {/* ADD SINGLE TRANSACTION POPUP MODAL */}
 //       <Modal
 //         open={isAddTxnModalOpen}
 //         onClose={() => {
@@ -664,35 +662,98 @@
 //           onSubmit={handleAddTransactionSubmit}
 //           className="flex flex-col gap-4 p-5 sm:p-6"
 //         >
-//           {/* Customer Dropdown */}
+//           {/* Searchable Customer Dropdown */}
 //           <div className="space-y-1.5">
 //             <label className="block text-sm font-semibold text-slate-700">
 //               Customer
 //             </label>
-//             <div className="relative rounded-xl border border-slate-200 bg-white shadow-2xs transition-all focus-within:border-ledger-brass focus-within:ring-2 focus-within:ring-ledger-brass/15">
-//               <select
-//                 required
+//             <div className="relative" ref={customerDropdownRef}>
+//               <button
+//                 type="button"
 //                 disabled={isSubmittingTxn || isFetching}
-//                 value={txnCustomerId}
-//                 onChange={(e) => setTxnCustomerId(e.target.value)}
-//                 className="w-full cursor-pointer appearance-none rounded-xl bg-transparent px-3.5 py-3 text-sm font-medium text-slate-700 outline-none disabled:opacity-50"
+//                 onClick={() => setIsCustomerDropdownOpen((prev) => !prev)}
+//                 className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-left text-sm font-medium shadow-2xs transition-all focus:border-ledger-brass focus:ring-2 focus:ring-ledger-brass/15 disabled:opacity-50"
 //               >
-//                 <option value="" disabled>
-//                   {isFetching ? "Loading customers..." : "Select Customer"}
-//                 </option>
-//                 {customers.map((cust) => (
-//                   <option key={cust.id} value={cust.id}>
-//                     {cust.name}
-//                   </option>
-//                 ))}
-//               </select>
-//               <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+//                 <span
+//                   className={
+//                     selectedCustomerObj ? "text-slate-800" : "text-slate-400"
+//                   }
+//                 >
+//                   {isFetching
+//                     ? "Loading customers..."
+//                     : selectedCustomerObj
+//                     ? selectedCustomerObj.name
+//                     : "Select Customer"}
+//                 </span>
 //                 {isFetching ? (
-//                   <Loader2 size={14} className="animate-spin" />
+//                   <Loader2 size={15} className="animate-spin text-slate-400" />
 //                 ) : (
-//                   "▼"
+//                   <ChevronDown
+//                     size={16}
+//                     className={`text-slate-400 transition-transform duration-150 ${
+//                       isCustomerDropdownOpen ? "rotate-180" : ""
+//                     }`}
+//                   />
 //                 )}
-//               </div>
+//               </button>
+
+//               {/* Dropdown Menu with Search */}
+//               {isCustomerDropdownOpen && (
+//                 <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100">
+//                   <div className="border-b border-slate-100 p-2">
+//                     <div className="relative flex items-center">
+//                       <Search
+//                         size={15}
+//                         className="absolute left-3 text-slate-400"
+//                       />
+//                       <input
+//                         type="text"
+//                         autoFocus
+//                         value={txnCustomerSearch}
+//                         onChange={(e) => setTxnCustomerSearch(e.target.value)}
+//                         placeholder="Search customer name..."
+//                         className="w-full rounded-lg bg-slate-50 py-2 pl-9 pr-3 text-xs font-medium text-slate-800 outline-none placeholder:text-slate-400 focus:bg-white focus:ring-1 focus:ring-ledger-brass"
+//                       />
+//                     </div>
+//                   </div>
+
+//                   <div className="max-h-52 overflow-y-auto divide-y divide-slate-50 py-1">
+//                     {filteredModalCustomers.length > 0 ? (
+//                       filteredModalCustomers.map((cust) => {
+//                         const isSelected = cust.id === txnCustomerId;
+//                         return (
+//                           <button
+//                             key={cust.id}
+//                             type="button"
+//                             onClick={() => {
+//                               setTxnCustomerId(cust.id);
+//                               setIsCustomerDropdownOpen(false);
+//                               setTxnCustomerSearch("");
+//                             }}
+//                             className={`flex w-full items-center justify-between px-3.5 py-2.5 text-left text-sm transition-colors ${
+//                               isSelected
+//                                 ? "bg-ledger-brass/10 font-semibold text-ledger-brass-dark"
+//                                 : "text-slate-700 hover:bg-slate-50"
+//                             }`}
+//                           >
+//                             <span>{cust.name}</span>
+//                             {isSelected && (
+//                               <Check
+//                                 size={15}
+//                                 className="text-ledger-brass-dark"
+//                               />
+//                             )}
+//                           </button>
+//                         );
+//                       })
+//                     ) : (
+//                       <div className="px-3 py-4 text-center text-xs font-medium text-slate-400">
+//                         No customers found
+//                       </div>
+//                     )}
+//                   </div>
+//                 </div>
+//               )}
 //             </div>
 //           </div>
 
@@ -771,7 +832,7 @@
 //             </div>
 //           </div>
 
-//           {/* Pay Button — POSTs to /transactions */}
+//           {/* Pay Button */}
 //           <Button
 //             type="submit"
 //             loading={isSubmittingTxn}
@@ -818,7 +879,7 @@ interface Customer {
   id: string;
   name: string;
   amount: string;
-  type: "give" | "get"; // 'give' -> Dene (Red), 'get' -> Lene (Green)
+  type: "give" | "get"; // 'give' -> Red (Lene higher/only), 'get' -> Green (Dene higher/only)
   rawBalance: number;
 }
 
@@ -914,24 +975,26 @@ export default function Dashboard() {
     const dene = parseFloat(String(item.total_dene || "0"));
     const balance = parseFloat(String(item.net_balance || "0"));
 
+    // Rules:
+    // 1. If only total lene -> Red ('give')
+    // 2. If only total dene -> Green ('get')
+    // 3. If both exist -> higher value determines color (if lene > dene -> Red, if dene > lene -> Green)
     let type: "give" | "get" = "give";
-    let formattedAmount = "0";
 
-    if (balance > 0) {
-      type = "get";
-      formattedAmount = balance.toLocaleString("en-IN");
-    } else if (balance < 0) {
-      type = "give";
-      formattedAmount = Math.abs(balance).toLocaleString("en-IN");
+    if (lene > dene) {
+      type = "give"; // Red
+    } else if (dene > lene) {
+      type = "get"; // Green
     } else {
-      if (lene >= dene) {
-        type = "get";
-        formattedAmount = lene.toLocaleString("en-IN");
-      } else {
-        type = "give";
-        formattedAmount = dene.toLocaleString("en-IN");
-      }
+      type = balance >= 0 ? "give" : "get";
     }
+
+    const displayAmount =
+      balance !== 0 ? Math.abs(balance) : Math.max(lene, dene);
+    const formattedAmount = displayAmount.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
     return {
       id: item.khata_customer_id,
@@ -1328,14 +1391,14 @@ export default function Dashboard() {
                 </button>
               ))
             ) : (
-  <div className="p-8 text-center text-sm font-medium text-ledger-faint">
-    {searchQuery.trim() ? (
-      <>No customers found matching "{searchQuery}"</>
-    ) : (
-      <>No customers found</>
-    )}
-  </div>
-)}
+              <div className="p-8 text-center text-sm font-medium text-ledger-faint">
+                {searchQuery.trim() ? (
+                  <>No customers found matching &quot;{searchQuery}&quot;</>
+                ) : (
+                  <>No customers found</>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
