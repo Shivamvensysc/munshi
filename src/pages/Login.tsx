@@ -4,7 +4,6 @@ import {
   Lock,
   Eye,
   EyeOff,
-  BookOpen,
   ShieldCheck,
   Zap,
   ArrowRight,
