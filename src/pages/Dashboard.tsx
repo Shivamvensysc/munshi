@@ -1779,6 +1779,7 @@ export default function Dashboard() {
   const [txnCustomerSearch, setTxnCustomerSearch] = useState("");
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [shouldFocusCustomerInput, setShouldFocusCustomerInput] = useState(false);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
   const customerInputRef = useRef<HTMLInputElement>(null);
 
@@ -1790,6 +1791,20 @@ export default function Dashboard() {
   const [totalLene, setTotalLene] = useState<number>(0);
   const [totalDene, setTotalDene] = useState<number>(0);
   const [netBalance, setNetBalance] = useState<number>(0);
+
+  // Focus and highlight customer input reliably after modal open or successful payment
+  useEffect(() => {
+    if ((isAddTxnModalOpen && shouldFocusCustomerInput) || (isAddTxnModalOpen && !isSubmittingTxn && shouldFocusCustomerInput)) {
+      const timer = setTimeout(() => {
+        if (customerInputRef.current) {
+          customerInputRef.current.focus();
+          customerInputRef.current.select();
+        }
+        setShouldFocusCustomerInput(false);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isAddTxnModalOpen, isSubmittingTxn, shouldFocusCustomerInput]);
 
   // Open Add Customer modal if routed from header shortcut
   useEffect(() => {
@@ -2040,6 +2055,7 @@ export default function Dashboard() {
     if (!txnCustomerId) {
       toast.error("Please select a customer.");
       customerInputRef.current?.focus();
+      customerInputRef.current?.select();
       return;
     }
 
@@ -2066,14 +2082,12 @@ export default function Dashboard() {
 
       if (data.success) {
         toast.success(data.message || "Transaction added successfully!");
-        // Clear state without closing the modal
+        // Clear form state without closing the modal
         resetTxnForm();
+        // Trigger auto-focus and highlight on customer input field
+        setShouldFocusCustomerInput(true);
         // Refresh customer list & stats to keep values up to date
         fetchDashboardData();
-        // Automatically focus on customer input field for next entry
-        setTimeout(() => {
-          customerInputRef.current?.focus();
-        }, 50);
       } else {
         toast.error(data.message || "Failed to add transaction.");
       }
@@ -2317,7 +2331,10 @@ export default function Dashboard() {
       {/* Floating add-transaction trigger */}
       <button
         type="button"
-        onClick={() => setIsAddTxnModalOpen(true)}
+        onClick={() => {
+          setIsAddTxnModalOpen(true);
+          setShouldFocusCustomerInput(true);
+        }}
         aria-label="Add Transaction"
         className="fixed bottom-24 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-ledger-ink text-white shadow-lg transition-all hover:bg-ledger-ink-dark active:scale-95 sm:right-6"
       >
