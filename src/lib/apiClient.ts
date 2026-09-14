@@ -5,13 +5,14 @@
  * `fetch(...)` scattered across pages. It gives us, in one place:
  *
  *   - the base URL (read once from `.env`, see src/lib/env.ts)
- *   - the Authorization header, read from the secure tokenStore — never
- *     from localStorage
+ *   - the Authorization header, built from the Cognito ID token held in the
+ *     secure tokenStore — never from localStorage
  *   - a single normalized error shape (ApiError) instead of every page
  *     re-implementing its own try/catch/parse dance
  *   - a request/response "interceptor": any authenticated call that comes
- *     back 401 Unauthorized first tries a silent refresh (via the stored
- *     refresh token) and retries once; only if that also fails does it
+ *     back 401 Unauthorized first tries a silent refresh (by exchanging the
+ *     stored AWS Cognito refresh token directly with Cognito for a new
+ *     token pair) and retries once; only if that also fails does it
  *     clear the session and redirect to /login — no page has to remember
  *     to do any of that itself
  *
@@ -21,6 +22,7 @@
 
 import { API_BASE_URL } from "./env";
 import { tokenStore } from "../auth/tokenStore";
+import { cognitoAuth } from "./cognito";
 
 export interface ApiError {
   message: string;
@@ -63,45 +65,66 @@ function triggerUnauthorizedRedirect() {
 }
 
 /**
- * Silent refresh: exchanges the refresh token for a new access token.
+ * Decodes a JWT's payload without verifying its signature — good enough to
+ * read a claim (here, the Cognito username) back out of a token we already
+ * trust because we're the ones who stored it. Never use this to *validate*
+ * a token, only to read it.
+ */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+        .join("")
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Silent refresh: exchanges the AWS Cognito refresh token for a new
+ * access/id token pair — directly against Cognito, not our own backend.
  *
- * Implemented as a raw `fetch` (not via `apiRequest`) so it never recurses
- * into this same 401-handling logic, and doesn't depend on authService
- * (which itself depends on this file) — that would be a circular import.
+ * Doesn't depend on authService (which itself depends on this file) —
+ * that would be a circular import.
  *
  * Multiple requests can 401 around the same time (e.g. a page firing
- * several calls in parallel). `refreshPromise` makes sure only ONE network
- * call to /auth/refresh-token happens; every other caller just awaits the
- * same in-flight promise instead of hammering the endpoint.
+ * several calls in parallel). `refreshPromise` makes sure only ONE call to
+ * Cognito's refresh flow happens; every other caller just awaits the same
+ * in-flight promise instead of hammering the endpoint.
  *
- * NOTE: path + response shape ("token" / "refreshToken") are assumed to
- * mirror /auth/login. Update here if the backend's refresh endpoint differs.
+ * Cognito's refreshSession needs a `CognitoUser` (i.e. a username) to
+ * attach the refreshed session to. Rather than storing the email separately,
+ * we read it back out of the "cognito:username" (falling back to "email")
+ * claim already sitting in the ID token we have on hand.
  */
 let refreshPromise: Promise<string | null> | null = null;
 
 function refreshAccessToken(): Promise<string | null> {
   const refreshToken = tokenStore.getRefreshToken();
-  if (!refreshToken) return Promise.resolve(null);
+  const idToken = tokenStore.getIdToken();
+  if (!refreshToken || !idToken) return Promise.resolve(null);
 
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
+        const payload = decodeJwtPayload(idToken);
+        const username =
+          (payload?.["cognito:username"] as string | undefined) ??
+          (payload?.email as string | undefined);
+        if (!username) return null;
 
-        const raw = await parseBody(response);
-        const data = raw as { success?: boolean; token?: string; refreshToken?: string } | null;
+        const tokens = await cognitoAuth.refreshSession(username, refreshToken);
 
-        if (!response.ok || !data?.success || !data.token) {
-          return null;
-        }
-
-        tokenStore.setAccessToken(data.token);
-        if (data.refreshToken) tokenStore.setRefreshToken(data.refreshToken);
-        return data.token;
+        tokenStore.setAccessToken(tokens.accessToken);
+        tokenStore.setIdToken(tokens.idToken);
+        tokenStore.setRefreshToken(tokens.refreshToken);
+        return tokens.idToken;
       } catch {
         return null;
       } finally {
@@ -167,7 +190,9 @@ export async function apiRequest<T = unknown>(
   };
 
   if (auth) {
-    const token = tokenStore.getAccessToken();
+    // Backend now expects the Cognito ID token (not the access token) as
+    // the bearer credential on every authenticated call.
+    const token = tokenStore.getIdToken();
     if (token) finalHeaders.Authorization = `Bearer ${token}`;
   }
 
@@ -198,15 +223,16 @@ export async function apiRequest<T = unknown>(
   const raw = await parseBody(response);
 
   if (response.status === 401 && redirectOnUnauthorized) {
-    // Don't give up on the very first 401 — the access token may simply have
-    // expired. Try exchanging the refresh token for a new access token and
-    // replaying this exact request once. Only if that also fails (refresh
-    // token missing/expired/revoked) do we actually clear the session and
-    // send the user to /login. A logged-in user should only ever be logged
-    // out by clicking Logout, or by their refresh token itself expiring.
+    // Don't give up on the very first 401 — the ID token may simply have
+    // expired. Try exchanging the AWS Cognito refresh token for a fresh
+    // token pair and replaying this exact request once. Only if that also
+    // fails (refresh token missing/expired/revoked) do we actually clear
+    // the session and send the user to /login. A logged-in user should
+    // only ever be logged out by clicking Logout, or by their refresh
+    // token itself expiring.
     if (!_isRetryAfterRefresh) {
-      const newAccessToken = await refreshAccessToken();
-      if (newAccessToken) {
+      const newIdToken = await refreshAccessToken();
+      if (newIdToken) {
         return apiRequest<T>(path, { ...options, _isRetryAfterRefresh: true });
       }
     }

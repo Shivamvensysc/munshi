@@ -33,3 +33,12 @@ export const API_BASE_URL = readEnv(
   "VITE_API_BASE_URL",
   "https://322m7iq2ze.execute-api.ap-south-1.amazonaws.com/dev/api"
 );
+
+/** AWS Cognito User Pool ID, e.g. "ap-south-1_a4xkMF". */
+export const COGNITO_USER_POOL_ID = readEnv("VITE_COGNITO_USER_POOL_ID");
+
+/** AWS Cognito App Client ID. */
+export const COGNITO_CLIENT_ID = readEnv("VITE_COGNITO_CLIENT_ID");
+
+/** AWS region the Cognito user pool lives in, e.g. "ap-south-1". */
+export const AWS_REGION = readEnv("VITE_AWS_REGION", "ap-south-1");

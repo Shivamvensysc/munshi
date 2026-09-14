@@ -152,8 +152,12 @@ export const tokenStore = {
   setRefreshToken: (value: string): void => setValue("refreshToken", value),
   setIdToken: (value: string): void => setValue("idToken", value),
 
-  /** True if we currently hold an access token (used for route guards). */
+  /** True if we currently hold an access token. */
   hasAccessToken: (): boolean => !!getValue("accessToken"),
+
+  /** True if we currently hold an ID token (used for route guards — the ID
+   *  token is what's now sent as the API bearer credential, see apiClient). */
+  hasIdToken: (): boolean => !!getValue("idToken"),
 
   // ── Session data returned alongside the tokens at login ────────────────
   getUser: (): StoredUser | null => getJSON<StoredUser>("user"),

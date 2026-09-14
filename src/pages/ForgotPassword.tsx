@@ -1,9 +1,101 @@
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import {  ShieldCheck, KeyRound, ArrowRight } from "lucide-react";
-import PhoneField from "../components/PhoneField";
+import {
+  ShieldCheck,
+  KeyRound,
+  ArrowRight,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import { toast } from "react-toastify";
 import Button from "../components/Button";
+import { cognitoAuth } from "../lib/cognito";
 
 export default function ForgotPassword() {
+  // Form State
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmNewPin, setConfirmNewPin] = useState("");
+
+  // UI Interaction States
+  const [step, setStep] = useState<1 | 2>(1); // 1 = request code, 2 = confirm code + new PIN
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+
+  // Step 1: request a password-reset OTP code via email.
+  const handleRequestCode = async (e: FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      toast.error("Please enter your registered email address.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await cognitoAuth.forgotPassword(cleanEmail);
+      toast.success("A password reset OTP has been sent to your email.");
+      setStep(2);
+    } catch (error) {
+      console.error("Forgot Password Error:", error);
+      toast.error(cognitoAuth.getErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Step 2: confirm the OTP code + set the new 4-digit PIN.
+  const handleResetPassword = async (e: FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!code || code.length < 4) {
+      toast.error("Please enter a valid OTP code.");
+      return;
+    }
+
+    if (!newPin || newPin.length !== 4) {
+      toast.error("Password/PIN must be exactly 4 digits.");
+      return;
+    }
+
+    if (newPin !== confirmNewPin) {
+      toast.error("Passwords/PINs do not match!");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await cognitoAuth.confirmPassword(cleanEmail, code, newPin);
+      toast.success("Password reset successfully! Please sign in.");
+      setResetDone(true);
+    } catch (error) {
+      console.error("Reset Password Error:", error);
+      toast.error(cognitoAuth.getErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Resend the reset OTP code.
+  const handleResendCode = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+    setIsLoading(true);
+    try {
+      await cognitoAuth.forgotPassword(cleanEmail);
+      toast.success("A new OTP has been sent to your email.");
+    } catch (error) {
+      toast.error(cognitoAuth.getErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full bg-ledger-bg font-sans text-ledger-ink">
       {/* LEFT SIDE: Premium Showcase Panel */}
@@ -117,46 +209,210 @@ export default function ForgotPassword() {
 
         {/* Center Container */}
         <div className="mx-auto my-auto w-full max-w-md space-y-6 py-6">
-          <div className="space-y-2">
-            <h2 className="font-serif text-2xl font-semibold tracking-tight text-ledger-ink sm:text-3xl">
-              Forgot Password? 🔑
-            </h2>
-            <p className="text-sm text-ledger-subtle">
-              Enter your registered mobile number to reset your password PIN.
-            </p>
-          </div>
-
-          <form className="space-y-4">
-            <div>
-              <PhoneField value="" onChange={() => {}} />
+          {resetDone ? (
+            <div className="space-y-6 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-ledger-brass-light/30 bg-ledger-brass-light/10 text-ledger-brass-dark">
+                <ShieldCheck size={26} />
+              </div>
+              <div className="space-y-2">
+                <h2 className="font-serif text-2xl font-semibold tracking-tight text-ledger-ink sm:text-3xl">
+                  Password Reset! ✅
+                </h2>
+                <p className="text-sm text-ledger-subtle">
+                  Your password/PIN has been reset successfully. You can now
+                  sign in with your new PIN.
+                </p>
+              </div>
+              <Link to="/login" className="block w-full">
+                <Button
+                  type="button"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl !bg-ledger-brass py-3 text-sm font-semibold text-white shadow-sm transition-all hover:!bg-ledger-brass-dark active:scale-[0.99]"
+                >
+                  <span className="flex items-center gap-1.5">
+                    Sign In Now <ArrowRight size={16} />
+                  </span>
+                </Button>
+              </Link>
             </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <h2 className="font-serif text-2xl font-semibold tracking-tight text-ledger-ink sm:text-3xl">
+                  Forgot Password? 🔑
+                </h2>
+                <p className="text-sm text-ledger-subtle">
+                  {step === 1
+                    ? "Enter your registered email to receive a password reset OTP."
+                    : `Enter the OTP sent to ${email} and set your new 4-digit PIN.`}
+                </p>
+              </div>
 
-            <Button
-              type="button"
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl !bg-ledger-brass py-3 text-sm font-semibold text-white shadow-sm transition-all hover:!bg-ledger-brass-dark active:scale-[0.99]"
-            >
-              <span className="flex items-center gap-1.5">
-                Continue <ArrowRight size={16} />
-              </span>
-            </Button>
-          </form>
+              <form
+                onSubmit={step === 1 ? handleRequestCode : handleResetPassword}
+                className="space-y-4"
+              >
+                {/* Email Field */}
+                <div>
+                  <label
+                    htmlFor="reset-email"
+                    className="mb-1.5 block text-xs font-semibold text-ledger-muted"
+                  >
+                    Email Address
+                  </label>
+                  <div className="relative flex items-center rounded-xl border border-ledger-border bg-ledger-paper-alt px-3.5 transition-all hover:border-ledger-border-hover focus-within:border-ledger-brass focus-within:bg-white focus-within:ring-2 focus-within:ring-ledger-brass/20">
+                    <Mail size={18} className="shrink-0 text-ledger-placeholder" />
+                    <input
+                      id="reset-email"
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      disabled={step === 2 || isLoading}
+                      className="w-full bg-transparent py-3 pl-3 pr-2 text-sm font-semibold text-ledger-ink outline-none placeholder:font-normal placeholder:text-ledger-placeholder disabled:opacity-60"
+                      required
+                    />
+                  </div>
+                  {step === 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      className="mt-1 text-[11px] font-semibold text-ledger-brass-dark hover:underline"
+                    >
+                      Change email address?
+                    </button>
+                  )}
+                </div>
 
-          <div className="relative my-6 flex items-center justify-center">
-            <div className="w-full border-t border-ledger-border" />
-            <span className="absolute bg-ledger-paper px-3 text-[11px] font-semibold tracking-wider text-ledger-faint">
-              Remembered your password?
-            </span>
-          </div>
+                {/* STEP 2 FIELDS: OTP + New PIN */}
+                {step === 2 && (
+                  <>
+                    {/* OTP Code Input */}
+                    <div>
+                      <label
+                        htmlFor="reset-otp"
+                        className="mb-1.5 block text-xs font-semibold text-ledger-muted"
+                      >
+                        6-Digit Verification OTP
+                      </label>
+                      <div className="relative flex items-center rounded-xl border border-ledger-border bg-ledger-paper-alt px-3.5 transition-all hover:border-ledger-border-hover focus-within:border-ledger-brass focus-within:bg-white focus-within:ring-2 focus-within:ring-ledger-brass/20">
+                        <KeyRound size={18} className="shrink-0 text-ledger-placeholder" />
+                        <input
+                          id="reset-otp"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={code}
+                          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                          placeholder="Enter 6-digit OTP"
+                          disabled={isLoading}
+                          className="w-full bg-transparent py-3 pl-3 pr-2 text-sm font-semibold tracking-[0.2em] text-ledger-ink outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-ledger-placeholder disabled:opacity-60"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={handleResendCode}
+                          disabled={isLoading}
+                          className="shrink-0 text-xs font-semibold text-ledger-brass-dark hover:text-ledger-brass-darker disabled:opacity-50"
+                        >
+                          Resend
+                        </button>
+                      </div>
+                    </div>
 
-          <Link to="/login" className="block w-full">
-            <Button
-              variant="secondary"
-              type="button"
-              className="w-full rounded-xl border border-ledger-border bg-ledger-hover py-3 text-xs font-semibold text-ledger-muted hover:bg-ledger-border-soft"
-            >
-              Return to Sign In
-            </Button>
-          </Link>
+                    {/* New PIN Input */}
+                    <div>
+                      <label
+                        htmlFor="new-pin"
+                        className="mb-1.5 block text-xs font-semibold text-ledger-muted"
+                      >
+                        New 4-Digit Password (PIN)
+                      </label>
+                      <div className="relative flex items-center rounded-xl border border-ledger-border bg-ledger-paper-alt px-3.5 transition-all hover:border-ledger-border-hover focus-within:border-ledger-brass focus-within:bg-white focus-within:ring-2 focus-within:ring-ledger-brass/20">
+                        <Lock size={18} className="shrink-0 text-ledger-placeholder" />
+                        <input
+                          id="new-pin"
+                          type={showPin ? "text" : "password"}
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={newPin}
+                          onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
+                          placeholder="Enter new 4-digit PIN"
+                          disabled={isLoading}
+                          className="w-full bg-transparent py-3 pl-3 pr-2 text-sm font-semibold tracking-[0.3em] text-ledger-ink outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-ledger-placeholder disabled:opacity-60"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPin(!showPin)}
+                          className="p-1 text-ledger-placeholder transition-colors hover:text-ledger-muted"
+                          aria-label="Toggle password visibility"
+                        >
+                          {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm New PIN Input */}
+                    <div>
+                      <label
+                        htmlFor="confirm-new-pin"
+                        className="mb-1.5 block text-xs font-semibold text-ledger-muted"
+                      >
+                        Re-type New PIN
+                      </label>
+                      <div className="relative flex items-center rounded-xl border border-ledger-border bg-ledger-paper-alt px-3.5 transition-all hover:border-ledger-border-hover focus-within:border-ledger-brass focus-within:bg-white focus-within:ring-2 focus-within:ring-ledger-brass/20">
+                        <Lock size={18} className="shrink-0 text-ledger-placeholder" />
+                        <input
+                          id="confirm-new-pin"
+                          type={showPin ? "text" : "password"}
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={confirmNewPin}
+                          onChange={(e) =>
+                            setConfirmNewPin(e.target.value.replace(/\D/g, ""))
+                          }
+                          placeholder="Confirm new PIN"
+                          disabled={isLoading}
+                          className="w-full bg-transparent py-3 pl-3 pr-2 text-sm font-semibold tracking-[0.3em] text-ledger-ink outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-ledger-placeholder disabled:opacity-60"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <Button
+                  type="submit"
+                  loading={isLoading}
+                  loadingText="Please wait..."
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl !bg-ledger-brass py-3 text-sm font-semibold text-white shadow-sm transition-all hover:!bg-ledger-brass-dark active:scale-[0.99]"
+                >
+                  <span className="flex items-center gap-1.5">
+                    {step === 1 ? "Send Reset OTP" : "Reset Password"}{" "}
+                    <ArrowRight size={16} />
+                  </span>
+                </Button>
+              </form>
+
+              <div className="relative my-6 flex items-center justify-center">
+                <div className="w-full border-t border-ledger-border" />
+                <span className="absolute bg-ledger-paper px-3 text-[11px] font-semibold tracking-wider text-ledger-faint">
+                  Remembered your password?
+                </span>
+              </div>
+
+              <Link to="/login" className="block w-full">
+                <Button
+                  variant="secondary"
+                  type="button"
+                  className="w-full rounded-xl border border-ledger-border bg-ledger-hover py-3 text-xs font-semibold text-ledger-muted hover:bg-ledger-border-soft"
+                >
+                  Return to Sign In
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile View Footer */}
