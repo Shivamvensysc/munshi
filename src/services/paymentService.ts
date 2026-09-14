@@ -5,7 +5,7 @@ export interface CrossEntryInput {
   from_customer_id: string;
   to_customer_id: string;
   amount: number;
-  details: string;
+  description?: string;
 }
 
 export const paymentService = {
