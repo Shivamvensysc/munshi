@@ -17,14 +17,25 @@ export default function ForgotPassword() {
   // Form State
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [newPin, setNewPin] = useState("");
-  const [confirmNewPin, setConfirmNewPin] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
   // UI Interaction States
-  const [step, setStep] = useState<1 | 2>(1); // 1 = request code, 2 = confirm code + new PIN
+  const [step, setStep] = useState<1 | 2>(1); // 1 = request code, 2 = confirm code + new password
   const [isLoading, setIsLoading] = useState(false);
-  const [showPin, setShowPin] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [resetDone, setResetDone] = useState(false);
+
+  // Password Policy Regex: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character
+  const validatePasswordStrength = (pwd: string) => {
+    const minLength = pwd.length >= 8;
+    const hasUpper = /[A-Z]/.test(pwd);
+    const hasLower = /[a-z]/.test(pwd);
+    const hasNumber = /[0-9]/.test(pwd);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
+
+    return minLength && hasUpper && hasLower && hasNumber && hasSpecial;
+  };
 
   // Step 1: request a password-reset OTP code via email.
   const handleRequestCode = async (e: FormEvent) => {
@@ -49,7 +60,7 @@ export default function ForgotPassword() {
     }
   };
 
-  // Step 2: confirm the OTP code + set the new 4-digit PIN.
+  // Step 2: confirm the OTP code + set the new strong password.
   const handleResetPassword = async (e: FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
@@ -59,19 +70,21 @@ export default function ForgotPassword() {
       return;
     }
 
-    if (!newPin || newPin.length !== 4) {
-      toast.error("Password/PIN must be exactly 4 digits.");
+    if (!validatePasswordStrength(newPassword)) {
+      toast.error(
+        "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character."
+      );
       return;
     }
 
-    if (newPin !== confirmNewPin) {
-      toast.error("Passwords/PINs do not match!");
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Passwords do not match!");
       return;
     }
 
     setIsLoading(true);
     try {
-      await cognitoAuth.confirmPassword(cleanEmail, code, newPin);
+      await cognitoAuth.confirmPassword(cleanEmail, code, newPassword);
       toast.success("Password reset successfully! Please sign in.");
       setResetDone(true);
     } catch (error) {
@@ -114,12 +127,12 @@ export default function ForgotPassword() {
         {/* Brand Header */}
         <div className="relative z-10 flex items-center gap-3.5">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-ledger-brass-light/30 bg-ledger-brass-light/15 shadow-lg overflow-hidden">
-  <img
-    src="/image.png"
-    alt="Online Khata Logo"
-    className="h-8 w-8 object-contain"
-  />
-</div>
+            <img
+              src="/image.png"
+              alt="Online Khata Logo"
+              className="h-8 w-8 object-contain"
+            />
+          </div>
           <div className="flex flex-col justify-center">
             <span className="font-serif text-2xl font-semibold leading-none tracking-tight text-white">
               <span className="text-ledger-gold">Online Khata</span>
@@ -144,7 +157,7 @@ export default function ForgotPassword() {
             </h1>
 
             <p className="max-w-md text-sm font-normal leading-relaxed text-white/60">
-              Easily reset your 4-digit security PIN in a few steps and regain
+              Easily reset your account password in a few steps and regain
               full access to your business ledger.
             </p>
           </div>
@@ -187,13 +200,13 @@ export default function ForgotPassword() {
         {/* Top Navigation Link */}
         <div className="flex items-center justify-between lg:justify-end">
           <div className="flex items-center gap-2.5 lg:hidden">
-           <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-ledger-brass-light/30 bg-ledger-brass-light/15 shadow-lg overflow-hidden">
-  <img
-    src="/image.png"
-    alt="Online Khata Logo"
-    className="h-8 w-8 object-contain"
-  />
-</div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-ledger-brass-light/30 bg-ledger-brass-light/15 shadow-lg overflow-hidden">
+              <img
+                src="/image.png"
+                alt="Online Khata Logo"
+                className="h-8 w-8 object-contain"
+              />
+            </div>
             <span className="font-serif text-xl font-semibold tracking-tight text-ledger-ink">
               <span className="text-ledger-brass-dark">Online Khata</span>
             </span>
@@ -219,8 +232,8 @@ export default function ForgotPassword() {
                   Password Reset! ✅
                 </h2>
                 <p className="text-sm text-ledger-subtle">
-                  Your password/PIN has been reset successfully. You can now
-                  sign in with your new PIN.
+                  Your password has been reset successfully. You can now sign
+                  in with your new password.
                 </p>
               </div>
               <Link to="/login" className="block w-full">
@@ -243,7 +256,7 @@ export default function ForgotPassword() {
                 <p className="text-sm text-ledger-subtle">
                   {step === 1
                     ? "Enter your registered email to receive a password reset OTP."
-                    : `Enter the OTP sent to ${email} and set your new 4-digit PIN.`}
+                    : `Enter the OTP sent to ${email} and set your new password.`}
                 </p>
               </div>
 
@@ -284,7 +297,7 @@ export default function ForgotPassword() {
                   )}
                 </div>
 
-                {/* STEP 2 FIELDS: OTP + New PIN */}
+                {/* STEP 2 FIELDS: OTP + New Password */}
                 {step === 2 && (
                   <>
                     {/* OTP Code Input */}
@@ -320,61 +333,58 @@ export default function ForgotPassword() {
                       </div>
                     </div>
 
-                    {/* New PIN Input */}
+                    {/* New Password Input */}
                     <div>
                       <label
-                        htmlFor="new-pin"
+                        htmlFor="new-password"
                         className="mb-1.5 block text-xs font-semibold text-ledger-muted"
                       >
-                        New 4-Digit Password (PIN)
+                        New Password
                       </label>
                       <div className="relative flex items-center rounded-xl border border-ledger-border bg-ledger-paper-alt px-3.5 transition-all hover:border-ledger-border-hover focus-within:border-ledger-brass focus-within:bg-white focus-within:ring-2 focus-within:ring-ledger-brass/20">
                         <Lock size={18} className="shrink-0 text-ledger-placeholder" />
                         <input
-                          id="new-pin"
-                          type={showPin ? "text" : "password"}
-                          inputMode="numeric"
-                          maxLength={4}
-                          value={newPin}
-                          onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
-                          placeholder="Enter new 4-digit PIN"
+                          id="new-password"
+                          type={showPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Min 8 characters (A-Z, a-z, 0-9, @$!)"
                           disabled={isLoading}
-                          className="w-full bg-transparent py-3 pl-3 pr-2 text-sm font-semibold tracking-[0.3em] text-ledger-ink outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-ledger-placeholder disabled:opacity-60"
+                          className="w-full bg-transparent py-3 pl-3 pr-2 text-sm font-semibold text-ledger-ink outline-none placeholder:font-normal placeholder:text-ledger-placeholder disabled:opacity-60"
                           required
                         />
                         <button
                           type="button"
-                          onClick={() => setShowPin(!showPin)}
+                          onClick={() => setShowPassword(!showPassword)}
                           className="p-1 text-ledger-placeholder transition-colors hover:text-ledger-muted"
                           aria-label="Toggle password visibility"
                         >
-                          {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
+                      <p className="mt-1 text-[11px] text-ledger-subtle">
+                        Must contain at least 8 characters, uppercase, lowercase, number, and special symbol.
+                      </p>
                     </div>
 
-                    {/* Confirm New PIN Input */}
+                    {/* Confirm New Password Input */}
                     <div>
                       <label
-                        htmlFor="confirm-new-pin"
+                        htmlFor="confirm-new-password"
                         className="mb-1.5 block text-xs font-semibold text-ledger-muted"
                       >
-                        Re-type New PIN
+                        Confirm New Password
                       </label>
                       <div className="relative flex items-center rounded-xl border border-ledger-border bg-ledger-paper-alt px-3.5 transition-all hover:border-ledger-border-hover focus-within:border-ledger-brass focus-within:bg-white focus-within:ring-2 focus-within:ring-ledger-brass/20">
                         <Lock size={18} className="shrink-0 text-ledger-placeholder" />
                         <input
-                          id="confirm-new-pin"
-                          type={showPin ? "text" : "password"}
-                          inputMode="numeric"
-                          maxLength={4}
-                          value={confirmNewPin}
-                          onChange={(e) =>
-                            setConfirmNewPin(e.target.value.replace(/\D/g, ""))
-                          }
-                          placeholder="Confirm new PIN"
+                          id="confirm-new-password"
+                          type={showPassword ? "text" : "password"}
+                          value={confirmNewPassword}
+                          onChange={(e) => setConfirmNewPassword(e.target.value)}
+                          placeholder="Re-enter new password"
                           disabled={isLoading}
-                          className="w-full bg-transparent py-3 pl-3 pr-2 text-sm font-semibold tracking-[0.3em] text-ledger-ink outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-ledger-placeholder disabled:opacity-60"
+                          className="w-full bg-transparent py-3 pl-3 pr-2 text-sm font-semibold text-ledger-ink outline-none placeholder:font-normal placeholder:text-ledger-placeholder disabled:opacity-60"
                           required
                         />
                       </div>

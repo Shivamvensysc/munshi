@@ -251,8 +251,7 @@ export default function Login() {
               Welcome Back 👋
             </h2>
             <p className="text-sm text-ledger-subtle">
-              Please enter your registered email and password to sign
-              in.
+              Please enter your registered email and password to sign in.
             </p>
           </div>
 
@@ -284,20 +283,12 @@ export default function Login() {
 
             {/* Password Field */}
             <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label
-                  htmlFor="password"
-                  className="text-xs font-semibold text-ledger-muted"
-                >
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <Link
-                  to="/forgot-password"
-                  className="text-xs font-semibold text-ledger-brass-dark hover:text-ledger-brass-darker"
-                >
-                  Forgot Password?
-                </Link>
-              </div>
+              <label
+                htmlFor="password"
+                className="mb-1.5 block text-xs font-semibold text-ledger-muted"
+              >
+                Password <span className="text-red-500">*</span>
+              </label>
 
               <div className="relative flex items-center rounded-xl border border-ledger-border bg-ledger-paper-alt px-3.5 transition-all duration-200 hover:border-ledger-border-hover focus-within:border-ledger-brass focus-within:bg-white focus-within:ring-2 focus-within:ring-ledger-brass/20">
                 <Lock size={18} className="shrink-0 text-ledger-placeholder" />
@@ -319,6 +310,16 @@ export default function Login() {
                 >
                   {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
+              </div>
+
+              {/* Forgot Password Link - Placed below password field */}
+              <div className="mt-1.5 flex justify-end">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-semibold text-ledger-brass-dark hover:text-ledger-brass-darker"
+                >
+                  Forgot Password?
+                </Link>
               </div>
             </div>
 

@@ -10,7 +10,7 @@ import Modal from "./ui/Modal";
 import Button from "./Button";
 
 const OTP_LENGTH = 6;
-const RESEND_SECONDS = 60;
+const RESEND_SECONDS = 120; // 2 minutes (120 seconds)
 
 interface OtpModalProps {
   open: boolean;
@@ -72,7 +72,11 @@ export default function OtpModal({
 
   const code = digits.join("");
   const isComplete = code.length === OTP_LENGTH;
-  const timerLabel = `0:${secondsLeft.toString().padStart(2, "0")}`;
+
+  // Format MM:SS for the 2-minute timer
+  const minutes = Math.floor(secondsLeft / 60);
+  const remainingSeconds = secondsLeft % 60;
+  const timerLabel = `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 
   const focusInput = (index: number) => {
     inputRefs.current[index]?.focus();

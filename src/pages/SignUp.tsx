@@ -308,7 +308,7 @@ export default function SignUp() {
             to="/login"
             className="text-xs font-semibold text-ledger-brass-dark hover:text-ledger-brass-darker"
           >
-            Sign In Instead &rarr;
+            Sign In to Existing Account &rarr;
           </Link>
         </div>
 
