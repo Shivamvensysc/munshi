@@ -1328,10 +1328,14 @@ export default function Dashboard() {
                 </button>
               ))
             ) : (
-              <div className="p-8 text-center text-sm font-medium text-ledger-faint">
-                No customers found matching "{searchQuery}"
-              </div>
-            )}
+  <div className="p-8 text-center text-sm font-medium text-ledger-faint">
+    {searchQuery.trim() ? (
+      <>No customers found matching "{searchQuery}"</>
+    ) : (
+      <>No customers found</>
+    )}
+  </div>
+)}
           </div>
         </div>
       </div>

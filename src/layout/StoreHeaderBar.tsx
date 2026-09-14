@@ -181,7 +181,7 @@ export default function StoreHeaderBar() {
                     className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-ledger-brass-dark transition-colors hover:bg-ledger-hover sm:text-sm"
                   >
                     <Plus size={15} className="stroke-[2.5]" />
-                    <span>+ Create New Khata</span>
+                    <span>Create New Khata</span>
                   </button>
                 </div>
               </div>
