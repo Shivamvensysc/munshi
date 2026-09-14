@@ -152,7 +152,7 @@ export default function CustomerDetail() {
       id: tx.transaction_id,
       title:
         tx.description ||
-        (tx.transaction_type === "LENE" ? "Lene Entry" : "Dene Entry"),
+        (tx.transaction_type === "LENE" ? "" : ""),
       customerName: tx.customer_name || "",
       crossEntryPartyName: tx.cross_entry_party_name || "",
       date: formatDateString(
