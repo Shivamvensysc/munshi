@@ -29,7 +29,7 @@ export default function AccountProfilePage() {
   const cachedUser = authService.getCachedUser();
 
   const [storeName, setStoreName] = useState(
-    (cachedUser?.name as string | undefined) || "My Store",
+    (cachedUser?.name as string | undefined) || "Online Khata",
   );
   const [isEditing, setIsEditing] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -128,7 +128,7 @@ export default function AccountProfilePage() {
                 <Star size={13} /> Subscription
               </span>
               <span className="font-serif text-xs font-semibold text-ledger-mint">
-                27 Free Days
+                My application
               </span>
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function AccountProfilePage() {
                   </span>
                 </div>
                 <span className="font-serif text-xs font-semibold text-ledger-green sm:text-sm">
-                  27 Days
+                
                 </span>
               </div>
 
