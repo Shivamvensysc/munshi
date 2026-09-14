@@ -31,6 +31,8 @@ interface Entry {
   title: string;
   date: string;
   subPerson?: string;
+  customerName?: string;
+  crossEntryPartyName?: string;
   balance: string;
   leneAmount?: string;
   deneAmount?: string;
@@ -131,7 +133,12 @@ export default function CustomerDetail() {
   };
 
   // Map backend API transaction to UI Entry shape
-  const mapTransactionToEntry = (tx: TransactionApiData): Entry => {
+  const mapTransactionToEntry = (
+    tx: TransactionApiData & {
+      customer_name?: string;
+      cross_entry_party_name?: string;
+    },
+  ): Entry => {
     const numAmount = parseFloat(String(tx.amount || "0"));
     const numBalance = parseFloat(String(tx.running_balance || "0"));
     const rawDateSource =
@@ -146,6 +153,8 @@ export default function CustomerDetail() {
       title:
         tx.description ||
         (tx.transaction_type === "LENE" ? "Lene Entry" : "Dene Entry"),
+      customerName: tx.customer_name || "",
+      crossEntryPartyName: tx.cross_entry_party_name || "",
       date: formatDateString(
         tx.created_at || tx.transaction_date || new Date().toISOString(),
       ),
@@ -848,6 +857,12 @@ export default function CustomerDetail() {
               {entries.map((item, idx) => {
                 const status = getConfirmStatus(item.id);
                 const isConfirmed = status === "Y";
+                const hasReferenceNumber = Boolean(
+                  item.rawReferenceNumber &&
+                    item.rawReferenceNumber.trim() !== "",
+                );
+                const displayPartyName =
+                  item.crossEntryPartyName || item.customerName;
 
                 return (
                   <div
@@ -861,15 +876,32 @@ export default function CustomerDetail() {
                       <div className="truncate text-[15px] font-medium text-ledger-ink">
                         {item.title}
                       </div>
+
+                      {/* Cross entry party name: rendered in blue, bold, and larger font */}
+                      {hasReferenceNumber && displayPartyName && (
+                        <div className="mt-0.5 text-sm font-bold text-blue-600 sm:text-[15px]">
+                          {displayPartyName}
+                        </div>
+                      )}
+
                       <div className="mt-0.5 text-xs text-ledger-faint">
                         {item.date}
                       </div>
+
                       {item.subPerson && (
                         <div className="text-xs font-semibold text-ledger-brass-dark">
                           {item.subPerson}
                         </div>
                       )}
-                      <div className="mt-0.5 text-xs font-medium text-ledger-muted">
+
+                      {/* Balance: bold and red when reference number is present */}
+                      <div
+                        className={`mt-0.5 text-xs tabular-nums ${
+                          hasReferenceNumber
+                            ? "font-bold text-ledger-red"
+                            : "font-medium text-ledger-muted"
+                        }`}
+                      >
                         Balance ₹ {item.balance}
                       </div>
                     </div>
@@ -907,6 +939,13 @@ export default function CustomerDetail() {
                           </span>
                         )}
                       </div>
+
+                      {/* CRE label displayed directly behind (to the left of) the N/Check button when reference number exists */}
+                      {hasReferenceNumber && (
+                        <span className="text-[11px] font-bold tracking-wider text-slate-500">
+                          CRE
+                        </span>
+                      )}
 
                       <button
                         type="button"
