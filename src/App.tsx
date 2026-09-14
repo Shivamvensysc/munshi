@@ -17,6 +17,7 @@ const CustomerDetail = lazy(() => import("./pages/CustomerDetail"));
 const LedgerEntriesPage = lazy(() => import("./pages/LedgerEntriesPage"));
 const PaymentTransferForm = lazy(() => import("./pages/PaymentTransferForm"));
 const AccountProfilePage = lazy(() => import("./pages/AccountProfilePage"));
+const RecycleBinPage = lazy(() => import("./pages/RecycleBinPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 export default function App() {
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/ledger-entries-page" element={<LedgerEntriesPage />} />
           <Route path="/payment-transfer-form" element={<PaymentTransferForm />} />
           <Route path="/account-profile-page" element={<AccountProfilePage />} />
+          <Route path="/recycle-bin" element={<RecycleBinPage />} />
         </Route>
 
         {/* Fallback Route */}

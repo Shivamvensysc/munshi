@@ -205,12 +205,13 @@ export default function AccountProfilePage() {
 
               {openSettings && (
                 <div className="border-t border-ledger-border-soft bg-ledger-paper">
-                  <a
-                    href="#recycle-bin"
-                    className="block border-b border-ledger-border-soft px-4 py-3 text-xs font-medium text-ledger-muted transition-colors hover:bg-ledger-hover"
+                  <button
+                    type="button"
+                    onClick={() => navigate("/recycle-bin")}
+                    className="block w-full border-b border-ledger-border-soft px-4 py-3 text-left text-xs font-medium text-ledger-muted transition-colors hover:bg-ledger-hover"
                   >
                     Recycle Bin
-                  </a>
+                  </button>
                   <a
                     href="#delete-khata"
                     className="block px-4 py-3 text-xs font-medium text-ledger-muted transition-colors hover:bg-ledger-hover"

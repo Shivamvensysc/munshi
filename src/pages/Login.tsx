@@ -4,6 +4,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  BookOpen,
   ShieldCheck,
   Zap,
   ArrowRight,
@@ -91,16 +92,12 @@ export default function Login() {
 
         {/* REFINED TOP SECTION: Sleek Minimal Logo Header */}
         <div className="relative z-10 flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-ledger-brass-light/30 bg-ledger-brass-light/15 shadow-lg overflow-hidden">
-  <img
-    src="/image.png"
-    alt="Online Khata Logo"
-    className="h-8 w-8 object-contain"
-  />
-</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-ledger-brass-light/30 bg-ledger-brass-light/15 text-ledger-gold shadow-lg">
+            <BookOpen size={22} />
+          </div>
           <div className="flex flex-col justify-center">
             <span className="font-serif text-2xl font-semibold leading-none tracking-tight text-white">
-              <span className="text-ledger-gold">Online Khata</span>
+              <span className="text-ledger-gold">Munshi</span>
             </span>
             <span className="mt-1 text-[10px] font-medium tracking-widest text-white/50">
               Smart Ledger System
@@ -113,7 +110,7 @@ export default function Login() {
           <div className="space-y-4">
             <span className="inline-flex items-center gap-2 rounded-full border border-ledger-brass-light/30 bg-ledger-brass-light/10 px-3.5 py-1 text-xs font-semibold text-ledger-gold">
               <Zap size={13} className="fill-ledger-gold/20 text-ledger-gold" />
-              Smart Online Khata
+              Smart Digital Khata
             </span>
 
             <h1 className="font-serif text-4xl font-semibold leading-[1.15] tracking-tight text-white xl:text-5xl">
@@ -147,7 +144,7 @@ export default function Login() {
 
         {/* Footer Info */}
         <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-5 text-xs text-white/50">
-          <span>Online Khata — Daily Expenses Manager App</span>
+          <span>Munshi — Daily Expenses Manager App</span>
           <span>
             Need Help?{" "}
             <a
@@ -165,15 +162,11 @@ export default function Login() {
         {/* Mobile Header Logo */}
         <div className="flex items-center justify-between lg:justify-end">
           <div className="flex items-center gap-2.5 lg:hidden">
-             <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-ledger-brass-light/30 bg-ledger-brass-light/15 shadow-lg overflow-hidden">
-  <img
-    src="/image.png"
-    alt="Online Khata Logo"
-    className="h-8 w-8 object-contain"
-  />
-</div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ledger-ink text-ledger-gold">
+              <BookOpen size={18} />
+            </div>
             <span className="font-serif text-xl font-semibold tracking-tight text-ledger-ink">
-              <span className="text-ledger-brass-dark">Online Khata</span>
+              Live<span className="text-ledger-brass-dark">Munshi</span>
             </span>
           </div>
 
@@ -267,7 +260,7 @@ export default function Login() {
           <div className="relative my-6 flex items-center justify-center">
             <div className="w-full border-t border-ledger-border" />
             <span className="absolute bg-ledger-paper px-3 text-[11px] font-semibold tracking-wider text-ledger-faint">
-              New to Online Khata?
+              New to Munshi?
             </span>
           </div>
 
@@ -285,7 +278,7 @@ export default function Login() {
 
         {/* Footer for Mobile view */}
         <div className="text-center text-xs text-ledger-faint lg:hidden">
-          Online Khata — Daily Expenses Manager App
+          Munshi — Daily Expenses Manager App
         </div>
       </div>
     </div>
