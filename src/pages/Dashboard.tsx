@@ -975,10 +975,9 @@ export default function Dashboard() {
     const dene = parseFloat(String(item.total_dene || "0"));
     const balance = parseFloat(String(item.net_balance || "0"));
 
-    // Rules:
-    // 1. If only total lene -> Red ('give')
-    // 2. If only total dene -> Green ('get')
-    // 3. If both exist -> higher value determines color (if lene > dene -> Red, if dene > lene -> Green)
+    // Customer table rules:
+    // Lene > Dene -> Red ('give')
+    // Dene > Lene -> Green ('get')
     let type: "give" | "get" = "give";
 
     if (lene > dene) {
@@ -1220,16 +1219,17 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* DENE CARD - GREEN */}
           <div className="w-full rounded-2xl border border-ledger-border bg-ledger-paper p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-semibold text-ledger-muted">
                 Dene (You'll Give)
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ledger-red/10 text-ledger-red">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ledger-green/10 text-ledger-green">
                 <TrendingDown size={17} />
               </div>
             </div>
-            <div className="mt-3 font-serif text-2xl font-semibold tabular-nums text-ledger-red sm:text-3xl">
+            <div className="mt-3 font-serif text-2xl font-semibold tabular-nums text-ledger-green sm:text-3xl">
               ₹ {totalDene.toLocaleString("en-IN")}
             </div>
             <div className="mt-1 text-[11px] font-medium text-ledger-faint">
@@ -1237,16 +1237,17 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* LENE CARD - RED */}
           <div className="w-full rounded-2xl border border-ledger-border bg-ledger-paper p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-semibold text-ledger-muted">
                 Lene (You'll Get)
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ledger-green/10 text-ledger-green">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-ledger-red/10 text-ledger-red">
                 <TrendingUp size={17} />
               </div>
             </div>
-            <div className="mt-3 font-serif text-2xl font-semibold tabular-nums text-ledger-green sm:text-3xl">
+            <div className="mt-3 font-serif text-2xl font-semibold tabular-nums text-ledger-red sm:text-3xl">
               ₹ {totalLene.toLocaleString("en-IN")}
             </div>
             <div className="mt-1 text-[11px] font-medium text-ledger-faint">
