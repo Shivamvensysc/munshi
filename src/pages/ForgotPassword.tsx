@@ -30,7 +30,7 @@ export default function ForgotPassword() {
 </div>
           <div className="flex flex-col justify-center">
             <span className="font-serif text-2xl font-semibold leading-none tracking-tight text-white">
-              Live<span className="text-ledger-gold">Online Khata</span>
+              <span className="text-ledger-gold">Online Khata</span>
             </span>
             <span className="mt-1 text-[10px] font-medium tracking-widest text-white/50">
               Smart Ledger System
@@ -77,7 +77,7 @@ export default function ForgotPassword() {
 
         {/* Footer Info */}
         <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-5 text-xs text-white/50">
-          <span>LiveMunshi — Daily Expenses Manager App</span>
+          <span>Online Khata — Daily Expenses Manager App</span>
           <span>
             Need Help?{" "}
             <a

@@ -267,7 +267,7 @@ export default function Login() {
           <div className="relative my-6 flex items-center justify-center">
             <div className="w-full border-t border-ledger-border" />
             <span className="absolute bg-ledger-paper px-3 text-[11px] font-semibold tracking-wider text-ledger-faint">
-              New to Munshi?
+              New to Online Khata?
             </span>
           </div>
 

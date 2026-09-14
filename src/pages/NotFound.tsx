@@ -62,7 +62,7 @@ export default function NotFound() {
         </div>
 
         <p className="mt-8 text-center text-xs leading-relaxed text-white/50">
-          LiveMunshi — Daily Expenses Manager App
+          Online Khata — Daily Expenses Manager App
           <br />
           Help: +91 82956 74272 · Sector 46, Gurgaon, Haryana
         </p>
